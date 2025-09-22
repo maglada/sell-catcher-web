@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
-using PriceComparisonApp.Shops;
+using PriceComparisonApp.Models;
 
 namespace PriceComparisonApp.Services
 {

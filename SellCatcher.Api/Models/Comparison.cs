@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PriceComparisonApp.Shops
+namespace PriceComparisonApp.Models
 {
     public class Comparison
     {
