@@ -1,15 +1,15 @@
+using System.IO;
 using Microsoft.Playwright;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Security.AccessControl;
-using Microsoft.Extensions.Options;
 
 class Scraper
 {
     public static async Task Main(string[] args)
     {
-        var catalogUrl = "https://novus.zakaz.ua/uk/";
+        string filePath = "NovusLinks.txt";
+        var catalogUrls = File.ReadAllLines(filePath);
 
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -38,89 +38,103 @@ class Scraper
         page.Console += (_, msg) => Console.WriteLine($"BROWSER: {msg.Text}");
         page.PageError += (_, err) => Console.WriteLine($"PAGE ERROR: {err}");
 
-        try
+        foreach (var catalogUrl in catalogUrls)
         {
-            Console.WriteLine("Navigating to catalog...");
-            await page.GotoAsync(catalogUrl);
-            await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            if (string.IsNullOrWhiteSpace(catalogUrl)) continue;
 
-            // debug current page
-            var html = await page.ContentAsync();
-            Console.WriteLine($"Page HTML length: {html.Length}");
-            await page.ScreenshotAsync(new() { Path = "debug.png", FullPage = true });
-
-            // multiple selectors for products
-            var selectors = new[]
+            try
             {
-                ".ProductsBox",
-                ".products-box",
-                ".product-tile",
-                "[class*='ProductTile']",
-                "[class*='jsx-a1615c42095f26c8 Price__value_caption Price__value_discount']"
-            };
+                Console.WriteLine($"Navigating to catalog: {catalogUrl}");
+                await page.GotoAsync(catalogUrl);
+                await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
-            foreach (var selector in selectors)
-            {
-                Console.WriteLine($"Trying selector: {selector}");
-                var elements = await page.QuerySelectorAllAsync(selector);
-                if (elements.Count > 0)
+                var html = await page.ContentAsync();
+                Console.WriteLine($"Page HTML length: {html.Length}");
+                await page.ScreenshotAsync(new() { Path = "debug.png", FullPage = true });
+
+                var productElements = await page.QuerySelectorAllAsync(
+                    ".product-tile[data-testid*='product'], " +
+                    ".product-card:not(.product-card__price), " +
+                    "[class*='ProductTile'], " +
+                    "[class*='jsx-a1615c42095f26c8 Price__value_caption Price__value_discount']"
+                    );
+                
+                Console.WriteLine($"Found {productElements.Count} products");
+                
+                var seen = new HashSet<string>();
+                var processedProducts = new HashSet<string>();
+
+                foreach (var product in productElements)
+                {
+                    var text = (await product.InnerTextAsync())?.Trim();
+                    if (string.IsNullOrEmpty(text)) continue;
+
+                    if (!seen.Add(text)) continue;
+
+                    text = text.Replace("\u00A0", " ");
+                    text = Regex.Replace(text, @"\s+", " ");
+
+                    var salePattern = @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*до\s*(\d{2}\.\d{2})\s*(.+)";
+                    var normalPattern = @"^([\d.,]+)\s*₴\s*(?![\d.,]+\s*₴)(.+)$";
+
+                    var saleMatch = Regex.Match(text, salePattern);
+                    if (saleMatch.Success)
                     {
-                    Console.WriteLine($"Found {elements.Count} elements with selector {selector}");
+                        // --- SALE ITEM ---
+                        var discount = saleMatch.Groups[1].Value.Trim();
+                        var oldPrice = saleMatch.Groups[2].Value.Trim();
+                        var newPrice = saleMatch.Groups[3].Value.Trim();
+                        var untilDate = saleMatch.Groups[4].Value.Trim();
+                        var name = saleMatch.Groups[5].Value.Trim();
 
-                    foreach (var element in elements)
+                        name = Regex.Replace(name, @"(\d+\s*г)(?:\s*\d+\s*г)+", "$1");
+                        name = Regex.Replace(name, @"(\d+\s*г)(?:\s*\1)+", "$1", RegexOptions.IgnoreCase);
+                        name = Regex.Replace(name, @"(\d+\s*мл)(?:\s*\1)+", "$1", RegexOptions.IgnoreCase);
+
+                        var productKey = $"{name}_{newPrice}";
+                        if (processedProducts.Add(productKey)) // Only process if not seen before
+                        {
+                            Console.WriteLine("=== SALE ITEM ===");
+                            Console.WriteLine($"Знижка: {discount}");
+                            Console.WriteLine($"Стара ціна: {oldPrice}");
+                            Console.WriteLine($"Нова ціна: {newPrice}");
+                            Console.WriteLine($"Діє до: {untilDate}");
+                            Console.WriteLine($"Назва: {name}");
+                        }
+                        continue;
+                    }
+                    else if (Regex.Match(text, normalPattern) is Match normalMatch && normalMatch.Success)
                     {
-                        var text = (await element.InnerTextAsync())?.Trim();
-                        if (string.IsNullOrEmpty(text))
-                        {
-                            continue;
-                        }
-
-                        text = text.Replace("\u00A0", " ");
-                        text = Regex.Replace(text, @"\s+", " ");
-
-                        // !!!!SPECIFICALLY THIS TEXT RIGHT HERE is what we want!!!! otherwise it spams usless info
-                        var pattern = @"([+\-]?\d+\s*%)?\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*до\s*(\d{2}\.\d{2})\s*(.+)";
-                        var match = Regex.Match(text, pattern);
-
-                        // process only elements that match the regex
-                        if (!match.Success)
-                        {
-                            continue;
-                        }
-
-                        Console.WriteLine($"Raw text: {text}");
-
-                        var discount = match.Groups[1].Value.Trim();
-                        var oldPrice = match.Groups[2].Value.Trim();
-                        var newPrice = match.Groups[3].Value.Trim();
-                        var untilDate = match.Groups[4].Value.Trim();
-                        var name = match.Groups[5].Value.Trim();
+                        // --- NORMAL ITEM ---
+                        var price = normalMatch.Groups[1].Value.Trim();
+                        var name = normalMatch.Groups[2].Value.Trim();
 
                         name = Regex.Replace(name, @"(\d+\s*г)(?:\s*\1)+$", "$1");
 
-                        Console.WriteLine($"Знижка: {discount}");
-                        Console.WriteLine($"Стара ціна: {oldPrice}");
-                        Console.WriteLine($"Нова ціна: {newPrice}");
-                        Console.WriteLine($"Діє до: {untilDate}");
-                        Console.WriteLine($"Назва: {name}");
+                        var productKey = $"{name}_{price}";
+                        if (processedProducts.Add(productKey)) // Only process if not seen before
+                        {
+                            Console.WriteLine("=== NORMAL ITEM ===");
+                            Console.WriteLine($"Ціна: {price}");
+                            Console.WriteLine($"Назва: {name}");
+                        }
                     }
 
-                        break;
+                    else
+                    {
+                        Console.WriteLine("No match for product text.");
                     }
                 }
 
-                // save final state for debugging. can be removed later
                 await page.ScreenshotAsync(new PageScreenshotOptions { Path = "final.png", FullPage = true });
             }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            await page.ScreenshotAsync(new PageScreenshotOptions { Path = "error.png", FullPage = true });
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error at {catalogUrl}: {ex.Message}");
+                await page.ScreenshotAsync(new PageScreenshotOptions { Path = "error.png", FullPage = true });
+            }
         }
-        finally
-        {
-            await context.CloseAsync();
-        }
+
+        await context.CloseAsync();
     }
 }
