@@ -7,7 +7,7 @@ using System.Linq;
 
 class Scraper
 {
-    public static async Task Main(string[] args)
+    public static async Task RunScraper(string[] args)
     {
         // Path to file with catalog URLs
         
@@ -304,9 +304,4 @@ class Scraper
         return $"{cleanName}_{price}";
     }
 }
-<<<<<<< Updated upstream
 
-
-
-=======
->>>>>>> Stashed changes
