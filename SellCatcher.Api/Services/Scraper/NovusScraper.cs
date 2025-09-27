@@ -7,7 +7,7 @@ using System.Linq;
 
 class Scraper
 {
-    public static async Task RunScraper(string[] args)
+    public static async Task Main(string[] args)
     {
         // Path to file with catalog URLs
         
@@ -92,9 +92,21 @@ class Scraper
                     // Quick filtering to avoid noise
                     if (ShouldSkipText(text)) continue;
 
+                    // DEBUG: Log any text that contains percentage to see what we're missing
+                    if (text.Contains("%"))
+                    {
+                        Console.WriteLine($"DEBUG: Found text with percentage: '{text}'");
+                    }
+
+                    // DEBUG: Log any text that has multiple ₴ symbols (likely sale items)
+                    if (Regex.Matches(text, @"₴").Count > 1)
+                    {
+                        Console.WriteLine($"DEBUG: Found text with multiple prices: '{text}'");
+                    }
+
                     // Regex patterns:
-                    // salePattern: discount + old price + new price + "до DATE" + name
-                    var salePattern = @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*до\s*(\d{2}\.\d{2})\s*(.+)";
+                    // salePattern: Based on the actual format from debug output
+                    var salePattern = @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴до\s*(\d{2}\.\d{2})\s*(.+)";
                     
                     // normalPattern: just price + product name (excluding cases with multiple prices/discounts)
                     var normalPattern = @"^([\d.,]+)\s*₴\s*(?![\d.,]+\s*₴|до\s*\d|\d+\.\d+|.*%)(.*?)(?:\s+до\s+\d+\.\d+|\s+\d+\.\d+\s*₴|$)";
@@ -102,10 +114,16 @@ class Scraper
                     var saleMatch = Regex.Match(text, salePattern);
                     if (saleMatch.Success)
                     {
+                        Console.WriteLine($"DEBUG: SALE PATTERN MATCHED! Groups: {saleMatch.Groups.Count}");
+                        for (int i = 0; i < saleMatch.Groups.Count; i++)
+                        {
+                            Console.WriteLine($"  Group {i}: '{saleMatch.Groups[i].Value}'");
+                        }
+                        
                         // --- SALE ITEM ---
                         var discount = saleMatch.Groups[1].Value.Trim();
-                        var oldPrice = saleMatch.Groups[2].Value.Trim();
-                        var newPrice = saleMatch.Groups[3].Value.Trim();
+                        var oldPrice = saleMatch.Groups[2].Value.Trim(); // Already without ₴
+                        var newPrice = saleMatch.Groups[3].Value.Trim(); // Already without ₴
                         var untilDate = saleMatch.Groups[4].Value.Trim();
                         var name = CleanProductName(saleMatch.Groups[5].Value);
 
@@ -120,11 +138,37 @@ class Scraper
                                 Console.WriteLine($"Нова ціна: {newPrice}");
                                 Console.WriteLine($"Діє до: {untilDate}");
                                 Console.WriteLine($"Назва: {name}");
+                                Console.WriteLine("==================");
                             }
                         }
                     }
                     else
                     {
+                        // Also, let's make the sale pattern more flexible:
+                        // Try these alternative patterns if the main one fails:
+                        if (text.Contains("%") || Regex.Matches(text, @"₴").Count > 1)
+                        {
+                            // More flexible patterns to try:
+                            var alternativePatterns = new[]
+                            {
+                                @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴.*?(\d{2}\.\d{2}).*?(.+)",  // More flexible spacing
+                                @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*(.+)",                    // Without date requirement
+                                @"([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*([+\-]?\d+\s*%)\s*(.+)",                   // Percentage at end
+                                @"(.+?)\s*([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴",                   // Name first
+                            };
+                            
+                            foreach (var pattern in alternativePatterns)
+                            {
+                                var altMatch = Regex.Match(text, pattern);
+                                if (altMatch.Success)
+                                {
+                                    Console.WriteLine($"DEBUG: ALTERNATIVE SALE PATTERN MATCHED: {pattern}");
+                                    Console.WriteLine($"DEBUG: Text was: '{text}'");
+                                    break;
+                                }
+                            }
+                        }
+                        
                         var normalMatch = Regex.Match(text, normalPattern);
                         if (normalMatch.Success)
                         {
@@ -140,6 +184,7 @@ class Scraper
                                     Console.WriteLine("=== NORMAL ITEM ===");
                                     Console.WriteLine($"Ціна: {price}");
                                     Console.WriteLine($"Назва: {name}");
+                                    Console.WriteLine("==================");
                                 }
                             }
                         }
@@ -176,7 +221,7 @@ class Scraper
         // Pure numbers only (not valid products)
         if (Regex.IsMatch(text, @"^\s*\d+\s*$")) return true;
         
-        // Very short texts that don’t include a price
+        // Very short texts that don't include a price
         if (text.Length < 5 && !text.Contains("₴")) return true;
         
         // No price and no letters → likely junk
@@ -259,6 +304,9 @@ class Scraper
         return $"{cleanName}_{price}";
     }
 }
+<<<<<<< Updated upstream
 
 
 
+=======
+>>>>>>> Stashed changes
