@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LiteDB;
 
-namespace PriceComparisonApp.Models
+namespace SellCatcher.Api.Models
 {
     public class Comparison
     {
+        [BsonId]
         public int Id { get; set; }
-        public string ProductName { get; set; } = "";  // Название товара
-        public decimal Shop1Price { get; set; }  // Цена в магазине 1
-        public decimal Shop2Price { get; set; }  // Цена в магазине 2
-        public string CheaperIn { get; set; } = "";   // Где дешевле
-        public DateTime Date { get; set; }      // Когда сравнивали
+        public string ProductName { get; set; } = "";  
+        public decimal Shop1Price { get; set; }  
+        public decimal Shop2Price { get; set; }  
+        public string CheaperIn { get; set; } = "";
+        public DateTime Date { get; set; } = DateTime.UtcNow;
     }
 }
