@@ -1,15 +1,17 @@
-﻿using System;
+﻿using LiteDB;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PriceComparisonApp.Models
+namespace SellCatcher.Api.Models
 {
     public class Shop1Product
     {
-        public int Id { get; set; }        // Индекс товара
-        public string Name { get; set; } = "";  // Название товара
-        public decimal Price { get; set; } // Цена товара
+        [BsonId]
+        public int Id { get; set; } 
+        public string Name { get; set; } = "";  
+        public decimal Price { get; set; } 
     }
 }

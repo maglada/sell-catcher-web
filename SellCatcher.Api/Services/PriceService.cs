@@ -3,44 +3,48 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PriceComparisonApp.Models;
+using SellCatcher.Api.Models;
 
-namespace PriceComparisonApp.Services
+namespace SellCatcher.Api.Services
 {
     public class PriceService
     {
-        private readonly DatabaseService _dbService;
+        private readonly DatabaseService _db;
 
-        public PriceService(DatabaseService dbService)
+        public PriceService(DatabaseService db)
         {
-            _dbService = dbService;
+            _db = db;
         }
 
-        // Сравнить все товары по названиям
-        public void CompareAllProducts()
+        public void LoadToDatabase(System.Collections.Generic.List<Shop1Product> shop1, System.Collections.Generic.List<Shop2Product> shop2)
         {
-            var shop1Products = _dbService.GetShop1Products();
-            var shop2Products = _dbService.GetShop2Products();
+            foreach (var p in shop1) _db.AddShop1Product(p);
+            foreach (var p in shop2) _db.AddShop2Product(p);
+        }
 
-            foreach (var p1 in shop1Products)
+        public void CompareAllAndSave()
+        {
+            var s1 = _db.GetShop1Products();
+            var s2 = _db.GetShop2Products();
+
+            foreach (var p1 in s1)
             {
-                var p2 = shop2Products.FirstOrDefault(x => x.Name == p1.Name);
-                if (p2 != null)
+                var p2 = s2.FirstOrDefault(x => x.Name == p1.Name);
+                if (p2 == null) continue;
+
+                var cheaper = p1.Price < p2.Price ? "Shop1" : p1.Price > p2.Price ? "Shop2" : "Equal";
+
+                var comp = new Comparison
                 {
-                    var cheaperIn = p1.Price < p2.Price ? "Shop1" :
-                                    p1.Price > p2.Price ? "Shop2" : "Equal";
+                    ProductName = p1.Name,
+                    Shop1Price = p1.Price,
+                    Shop2Price = p2.Price,
+                    CheaperIn = cheaper,
+                    Date = DateTime.UtcNow
+                };
 
-                    var comparison = new Comparison
-                    {
-                        ProductName = p1.Name,
-                        Shop1Price = p1.Price,
-                        Shop2Price = p2.Price,
-                        CheaperIn = cheaperIn,
-                        Date = DateTime.Now
-                    };
+                _db.SaveComparison(comp);
 
-                    _dbService.SaveComparison(comparison);
-                }
             }
         }
     }
