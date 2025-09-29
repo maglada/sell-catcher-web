@@ -1,0 +1,38 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: sans-serif;
+    margin: 0;
+}
+
+.site-header {
+    display: flex;
+    justify-content: space-between; /* Лого зліва, іконки справа */
+    align-items: center;            /* Вирівняти по вертикалі */
+    background-color: #e7e7e7;
+    color: white;
+    padding: 10px 20px;
+}
+
+.logo-block {
+    display: flex;
+    align-items: center; /* "Лого" і кнопка по одній лінії */
+    gap: 15px;           /* відстань між ними */
+}
+
+.site-footer {
+    background-color: #fcfcfc;
+    border-top: 1px solid #cecece;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2rem;
+    font-size: 0.9rem;
+    min-height: 250px;
+}
+.site-content {
+    flex: 1;
+    min-height: 300px;
+}

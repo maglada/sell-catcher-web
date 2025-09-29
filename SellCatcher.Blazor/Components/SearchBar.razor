@@ -1,0 +1,55 @@
+<div class="search-container">
+    <input 
+        type="text" 
+        placeholder="Пошук..." 
+        @bind="searchText" 
+        @bind:event="oninput"
+        @bind:after="OnTextChanged"
+        class="search-input" />
+
+    @if (suggestions?.Any() == true )
+    {
+        <ul class="suggestions-list">
+            @foreach (var s in suggestions)
+            {
+                <li @onclick="() => SelectSuggestion(s)">@s</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private string searchText = "";
+    private List<string> allItems = new() { "Пиво", "Вино", "Водка", "Віскі", "Сік", "Кава", "Чай" };
+    private List<string> suggestions = new();
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        suggestions = allItems
+            .Where(x => x.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .Take(5)
+            .ToList();
+    }
+
+    private void SelectSuggestion(string s)
+    {
+        searchText = s;
+        suggestions.Clear();
+    }
+        private void OnTextChanged()
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            suggestions.Clear();
+        }
+        else
+        {
+            suggestions = allItems
+            .Where(x => x.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .Take(5)
+            .ToList();
+        }
+    }
+
+}

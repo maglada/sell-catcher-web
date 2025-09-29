@@ -1,0 +1,112 @@
+@page "/profile"
+
+<div class="profile">
+<h2>Мої дані</h2>
+        <img src="/images/avatar.png" alt="Avatar" class="avatar" />
+    <div class="info-container">
+        
+
+        <div class="info-box">
+            <h3>Персональна інформація</h3>
+            <button @onclick="ToggleEdit">@buttonText</button>
+
+            <div>
+                <b>П.І.Б:</b>
+                @if (isEditing)
+                {
+                    <input @bind="User.FullName" />
+                }
+                else
+                {
+                    <span>@User.FullName</span>
+                }
+            </div>
+
+            <div>
+                <b>Дата народження:</b>
+                @if (isEditing)
+                {
+                    <input type="date" @bind="User.BirthDate" />
+                }
+                else
+                {
+                    <span>@User.BirthDate.ToShortDateString()</span>
+                }
+            </div>
+
+            <div>
+                <b>Стать:</b>
+                @if (isEditing)
+                {
+                    <select @bind="User.Gender">
+                        <option value="Невідомо">Невідомо</option>
+                        <option value="Чоловік">Чоловік</option>
+                        <option value="Жінка">Жінка</option>
+                    </select>
+                }
+                else
+                {
+                    <span>@User.Gender</span>
+                }
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>Контакти</h3>
+
+            <div>
+                <b>E-mail:</b>
+                @if (isEditing)
+                {
+                    <input @bind="User.Email" />
+                }
+                else
+                {
+                    <span>@User.Email</span>
+                }
+            </div>
+
+            <div>
+                <b>Мобільний телефон:</b>
+                @if (isEditing)
+                {
+                    <input @bind="User.Phone" />
+                }
+                else
+                {
+                    <span>@User.Phone</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    private bool isEditing = false;
+    private string buttonText = "Изменить";
+
+    private UserInfo User = new UserInfo
+    {
+        FullName = "Прізвище Ім'я По-батькові",
+        BirthDate = DateTime.Now,
+        Gender = "Невідомо",
+        Email = "email@gmail.com",
+        Phone = "+380 67 123 45 67",
+        Password = ""
+    };
+
+    private void ToggleEdit()
+    {
+        isEditing = !isEditing;
+        buttonText = isEditing ? "Зберегти" : "Изменить";
+    }
+
+    public class UserInfo
+    {
+        public string FullName { get; set; }
+        public DateTime BirthDate { get; set; }
+        public string Gender { get; set; }
+        public string Password {get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+    }
+}

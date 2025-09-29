@@ -1,0 +1,25 @@
+<button 
+        @onclick="OnClick" 
+        @onmouseover="OnMouseOver" 
+        @onmouseout="OnMouseOut"
+        style="@($"{Style}; width:{Width}; height:{Height};")">
+    @ChildContent
+</button>
+@code {
+
+        [Parameter]
+        public EventCallback<MouseEventArgs> OnClick { get; set; }
+        [Parameter]
+        public EventCallback<MouseEventArgs> OnMouseOver { get; set; }
+        [Parameter]
+        public EventCallback<MouseEventArgs> OnMouseOut { get; set; }
+        [Parameter]
+        public string? Style { get; set; }
+        [Parameter]
+        public RenderFragment? ChildContent { get; set; }
+        [Parameter]
+        public string? Width { get; set; }
+        [Parameter]
+        public string? Height { get; set; }
+
+}

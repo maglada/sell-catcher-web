@@ -1,0 +1,37 @@
+<div style="display:inline-block; position:relative;">
+    <button @onclick="ToggleDropDown"
+            style="@($"{Style}; width:{Width}; height:{Height};")">
+        @ChildContent
+    </button>
+
+    @if (isOpen && !string.IsNullOrEmpty(DropDownContent))
+    {
+        <ul class="dropdown-list">
+            @foreach (var item in DropDownContent.Split(','))
+            {
+                var parts = item.Split('|');
+                if (parts.Length == 2)
+                {
+                    var name = parts[0].Trim();
+                    var url = parts[1].Trim();
+                    <li><a onclick="window.location.href='@url'" >@name</a></li>
+                }
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public string? Width { get; set; }
+    [Parameter] public string? Height { get; set; }
+    [Parameter] public string? DropDownContent { get; set; }
+
+    private bool isOpen = false;
+
+    private void ToggleDropDown()
+    {
+        isOpen = !isOpen;
+    }
+}

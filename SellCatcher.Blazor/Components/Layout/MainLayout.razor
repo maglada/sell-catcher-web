@@ -1,0 +1,67 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+
+    <!-- Спільний Header -->
+    <header class="site-header">
+        <div class="logo-block">
+        <div>Лого</div>
+        <SimpleDropDownButton 
+            Width="120px"
+            Height="40px"
+            Style="background-color:lightgray; margin-left:20px;"
+            DropDownContent = "Category|/categories, Home Page|/">
+                Каталог
+        </SimpleDropDownButton>
+         </div>   
+        <a href='/profile'>
+            <button>Profile</button>    
+         </a>
+         <!--<button onclick="window.location.href='/profile'">Profile</button>
+         закоментований варіант повністью перезавантажує 
+         сторінку через що з'являється загрузка, 
+         коли в той же час, варіант з <a> відразу переходе на посилання,
+         в результаті чого працює без загрузки-->
+    </header>
+
+    <!-- Тіло -->
+    <main class="site-content">
+        @Body
+    </main>
+
+    <!-- Спільний Footer 
+    Це нижня частина сайту з інформацією про сайт-->
+    <footer class="site-footer">
+        <div>
+            <strong>Соц. мережі</strong><br />
+            [іконки]
+        </div>
+        <div>
+            <strong>Use cases</strong>
+            <ul>
+                <li>bla</li>
+                <li>blu</li>
+                <li>bli</li>
+                <li>bla</li>
+                <li>blu</li>
+                <li>bli</li>
+                <li>bla</li>
+           
+            </ul>
+        </div>
+        <div>
+            <strong>Resources</strong>
+            <ul>
+ <li>bla</li>
+                <li>blu</li>
+                <li>bli</li>
+                <li>bla</li>
+                <li>blu</li>
+                <li>bli</li>
+                <li>bla</li>
+               
+            </ul>
+        </div>
+    </footer>
+
+</div>

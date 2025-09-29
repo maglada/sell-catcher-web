@@ -1,0 +1,12 @@
+<div class="category-button">
+    <a href="@Link">
+        <img src="@ImageUrl" alt="@Title" class="category-image" />
+        <div class="category-title">@Title</div>
+    </a>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Link { get; set; }
+    [Parameter] public string ImageUrl { get; set; }
+}
