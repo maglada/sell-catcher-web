@@ -1,0 +1,33 @@
+@page "/"
+
+<!-- Hero -->
+<section class="hero">
+    <h1>Назва</h1>
+    <p>Шото там</p>
+    <div>
+        <SearchBar/>
+    </div>
+</section>
+
+<!-- Categories -->
+<section class="categories">
+    <div class="categories-row">
+        <CategoryButton Title="Картопля 1" Link="/categories/1" ImageUrl="images/potato.jpg" />
+        <CategoryButton Title="Картопля 2" Link="/categories/2" ImageUrl="images/potato.jpg" />
+        <CategoryButton Title="Картопля 3" Link="/categories/3" ImageUrl="images/potato.jpg" />
+        <CategoryButton Title="Картопля 4" Link="/categories/4" ImageUrl="images/potato.jpg" />
+    </div >
+        <div style="text-align: center; padding: 3rem; ">
+        <a href="/categories" style="text-decoration: none; color: black;"> Більше категорій --></a>      <!--<h2 style="padding: 2rem;"> Більше категорій </h2>-->
+        </div>
+</section>
+
+
+@code {
+    string searchText = "";
+    private void OnInput(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? "";
+        Console.WriteLine($"Пошук: {searchText}");
+    }
+}

@@ -1,0 +1,40 @@
+<div class="products-container">
+    @foreach (var product in Products)
+    { 
+        if (product.Price >= filteredPriceMin && product.Price <= filteredPriceMax)
+        {
+        <button href = "/product/{@ProductId}" class="product-button">
+            <img src="@product.ImageUrl" alt="@product.Name" />
+            <span class="name">@product.Name</span>
+            <span class="price">@product.Price.ToString(format: "C")</span>
+        </button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int filteredPriceMin { get; set; }
+    [Parameter] public int filteredPriceMax { get; set; }
+    public class Product
+    {
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public string ImageUrl { get; set; } = "";
+    }
+    public string ProductId {get; set; } = "1";
+
+    private List<Product> Products = new List<Product>();
+
+    protected override void OnInitialized()
+    {
+        for (int i = 1; i <= 30; i++)
+        {
+            Products.Add(new Product
+            {
+                Name = $"Product {i}",
+                Price = 10 + i,
+                ImageUrl = "/images/potato.jpg",
+            });
+        }
+    }
+}

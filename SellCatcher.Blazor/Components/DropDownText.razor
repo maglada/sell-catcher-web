@@ -1,0 +1,20 @@
+<div>
+    <button @onclick="@ToggleDropDown">
+        @if(@isOpen == true) 
+        {
+            <div>
+                @productInfo
+            </div>
+        }
+    </button>
+</div>
+
+
+@code{
+    bool isOpen = false;
+    string productInfo = "Информация про продукт";
+    private void ToggleDropDown()
+        {
+            isOpen = !isOpen;
+        }
+}
