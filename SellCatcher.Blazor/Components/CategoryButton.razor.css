@@ -1,0 +1,40 @@
+.category-button {
+    background-color: aquamarine;
+    border-radius: 8px;
+    width: 150px;
+    height: 150px;
+    text-align: center;
+    margin: 10px;
+    -webkit-border-radius: 8px;
+    -moz-border-radius: 8px;
+    -ms-border-radius: 8px;
+    -o-border-radius: 8px;
+}
+
+.category-button a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.category-image {
+    width: 100%;
+    height: 150px;      /* можна підлаштувати */
+    object-fit: cover;  /* обрізає картинку акуратно */
+    border-radius: 8px; /* закруглені кути */
+    transition: transform 0.2s ease;
+}
+
+.category-image:hover {
+    transform: scale(1.05);
+    -webkit-transform: scale(1.05);
+    -moz-transform: scale(1.05);
+    -ms-transform: scale(1.05);
+    -o-transform: scale(1.05);
+}
+
+.category-title {
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}

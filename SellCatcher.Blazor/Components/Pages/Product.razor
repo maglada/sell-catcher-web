@@ -1,0 +1,34 @@
+@page "/product"
+
+<div class="product-sect">
+
+    <div class="info-container">
+        <div class="info-box">
+        <img src="/images/potato.jpg" alt="product-photo" class="product-photo"/>
+        </div>
+
+        <div class="info-box">
+            <h3>@name</h3>
+            <fieldset class="sell-price">
+            <label>@Price</label>
+            </fieldset>
+            <p>@sellPrice</p>
+
+            <button>Кошик</button>
+            
+
+        </div>
+            
+    </div>
+
+</div>
+
+
+
+@code{
+    [Parameter] public string ProductId {get; set;}
+    string name = "Product";
+    float Price = 100;
+    float sellPrice = 50;
+
+}

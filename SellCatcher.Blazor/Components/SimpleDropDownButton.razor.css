@@ -1,0 +1,33 @@
+.dropdown-list {
+    position: absolute;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    min-width: 180px;
+    top: 100%;      /* відкривається прямо під кнопкою */
+    left: 0;        /* вирівнювання по лівому краю */
+    z-index: 9999;  /* поверх усіх елементів */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.dropdown-list li {
+    border-bottom: 1px solid #eee;
+}
+
+.dropdown-list li:last-child {
+    border-bottom: none;
+}
+
+.dropdown-list a {
+    display: block;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+}
+
+.dropdown-list a:hover {
+    background: #f0f0f0;
+}
