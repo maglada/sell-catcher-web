@@ -1,4 +1,4 @@
-using LiteDB;
+/*using LiteDB;
 using SellCatcher.Api.Models;
 
 namespace SellCatcher.Api.Services;
@@ -14,3 +14,4 @@ public class LiteDbService
         col.Insert(item);
     }
 }
+*/
