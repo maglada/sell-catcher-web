@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using DiscApi.Models;
-using DiscApi.Services;
+/*using Microsoft.AspNetCore.Mvc;
+using SellCatcher.Api.Models;
+using SellCatcher.Api.Services;
 
 // DiscountService не добавлял, потому-что Виталик сказал что не нужно. Но если нужно, могу добавить. 
 
-namespace DiscApi.Controllers
+namespace SellCatcher.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -45,3 +45,4 @@ namespace DiscApi.Controllers
         }
     }
 }
+*/
