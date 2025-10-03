@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ProductScraper;
 
 namespace ProductScraper.Services
 {
@@ -15,11 +14,12 @@ namespace ProductScraper.Services
         private readonly ScraperFactory _factory;
         private readonly ScraperConfig _config;
         private readonly string _outputDirectory;
+        private readonly bool _autoSave;
 
         /// <summary>
         /// Initializes a new instance of the ScraperService with default configuration
         /// </summary>
-        public ScraperService() : this(CreateDefaultConfig(), "output")
+        public ScraperService() : this(CreateDefaultConfig(), "output", autoSave: false)
         {
         }
 
@@ -28,14 +28,19 @@ namespace ProductScraper.Services
         /// </summary>
         /// <param name="config">Scraper configuration settings</param>
         /// <param name="outputDirectory">Directory for saving results</param>
-        public ScraperService(ScraperConfig config, string outputDirectory = "output")
+        /// <param name="autoSave">Whether to automatically save results after scraping</param>
+        public ScraperService(ScraperConfig config, string outputDirectory = "output", bool autoSave = false)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _outputDirectory = outputDirectory ?? "output";
+            _autoSave = autoSave;
             _factory = new ScraperFactory(_config);
             
-            // Ensure output directory exists
-            Directory.CreateDirectory(_outputDirectory);
+            // Ensure output directory exists if auto-save is enabled
+            if (_autoSave)
+            {
+                Directory.CreateDirectory(_outputDirectory);
+            }
         }
 
         /// <summary>
@@ -49,7 +54,7 @@ namespace ProductScraper.Services
                 SlowMo = 1000,
                 EnableLogging = true,
                 EnableDebugOutput = false,
-                SaveDebugScreenshots = true,
+                SaveDebugScreenshots = false,
                 SaveErrorScreenshots = true
             };
         }
@@ -59,17 +64,25 @@ namespace ProductScraper.Services
         /// </summary>
         /// <param name="directory">Directory containing input files</param>
         /// <param name="filePattern">File pattern to match (e.g., "NovusLinks_*.txt")</param>
+        /// <param name="saveResults">Override auto-save setting for this operation</param>
         /// <returns>Dictionary of results with filename as key and product list as value</returns>
         public async Task<Dictionary<string, List<Product>>> ProcessAllFilesAsync(
             string directory = "sites", 
-            string filePattern = "NovusLinks_*.txt")
+            string filePattern = "NovusLinks_*.txt",
+            bool? saveResults = null)
         {
             Console.WriteLine($"=== Processing all {filePattern} files from {directory} ===");
             
             var results = await _factory.ProcessAllFilesAsync(directory, filePattern);
             
             PrintSummary(results);
-            SaveAllResults(results);
+            
+            // Save if explicitly requested or if auto-save is enabled
+            var shouldSave = saveResults ?? _autoSave;
+            if (shouldSave)
+            {
+                SaveAllResults(results);
+            }
             
             return results;
         }
@@ -78,8 +91,9 @@ namespace ProductScraper.Services
         /// Processes a single file
         /// </summary>
         /// <param name="filePath">Path to the file to process</param>
+        /// <param name="saveResults">Override auto-save setting for this operation</param>
         /// <returns>List of scraped products</returns>
-        public async Task<List<Product>> ProcessSingleFileAsync(string filePath)
+        public async Task<List<Product>> ProcessSingleFileAsync(string filePath, bool? saveResults = null)
         {
             Console.WriteLine($"=== Processing file: {filePath} ===");
             
@@ -87,14 +101,18 @@ namespace ProductScraper.Services
             
             Console.WriteLine($"Found {products.Count} products");
             
-            // Save results for single file
-            var fileName = Path.GetFileName(filePath);
-            var results = new Dictionary<string, List<Product>>
+            // Save if explicitly requested or if auto-save is enabled
+            var shouldSave = saveResults ?? _autoSave;
+            if (shouldSave)
             {
-                { fileName, products }
-            };
-            
-            SaveAllResults(results);
+                var fileName = Path.GetFileName(filePath);
+                var results = new Dictionary<string, List<Product>>
+                {
+                    { fileName, products }
+                };
+                
+                SaveAllResults(results);
+            }
             
             return products;
         }
@@ -134,8 +152,11 @@ namespace ProductScraper.Services
         /// <summary>
         /// Saves all scraping results to files
         /// </summary>
-        private void SaveAllResults(Dictionary<string, List<Product>> results)
+        public void SaveAllResults(Dictionary<string, List<Product>> results)
         {
+            // Ensure output directory exists
+            Directory.CreateDirectory(_outputDirectory);
+            
             foreach (var kvp in results)
             {
                 var fileName = kvp.Key;
@@ -206,6 +227,16 @@ namespace ProductScraper.Services
         public List<Product> GetSaleProducts(List<Product> products)
         {
             return products.Where(p => p.IsOnSale).ToList();
+        }
+        
+        /// <summary>
+        /// Gets products grouped by category
+        /// </summary>
+        public Dictionary<string, List<Product>> GroupByCategory(List<Product> products)
+        {
+            return products
+                .GroupBy(p => p.Category ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.ToList());
         }
     }
 }
