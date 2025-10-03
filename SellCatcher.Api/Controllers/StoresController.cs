@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using DiscApi.Services;
+using SellCatcher.Api .Services;
 
-namespace DiscApi.Controllers
+namespace  SellCatcher.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

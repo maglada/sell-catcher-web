@@ -1,4 +1,4 @@
-namespace DiscountsApi.Models
+namespace  SellCatcher.Api.Models
 {
     public class Discount
     {
