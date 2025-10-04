@@ -1,0 +1,11 @@
+Пересобрати image
+docker build -f SellCatcher.Docker/Dockerfile -t sellcatcher-api:latest .
+
+Зупинити старий контейнер
+docker stop <container-id>
+
+Видалити старий контейнер
+docker rm <container-id>
+
+Запустити новий контейнер з новим image
+docker run -d -p 8080:8080 sellcatcher-api:latest
