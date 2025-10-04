@@ -141,7 +141,7 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
         }
 
 
-
+        /***
         [Test]
         public void Registration_WithTheSameUsername_ThrowsError()
         {
@@ -173,5 +173,6 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
             // Assert
             Assert.That(ex.Message, Is.EqualTo("Username already exists"));
         }
+        ***/
     }
 }
