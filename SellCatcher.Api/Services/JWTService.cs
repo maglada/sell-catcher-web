@@ -1,41 +1,37 @@
-using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using SellCatcher.Api.Models;
 
 namespace SellCatcher.Api.Services
 {
     public class JWTService
     {
-        private readonly IOptions<AuthSettings> _options;
-
-        public JWTService(IOptions<AuthSettings> options)
-        {
-            _options = options;
-        }
-
         public string GenerateToken(Account account)
         {
-            var claims = new List<Claim>
+            var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+
+            if (string.IsNullOrEmpty(secretKey))
+                throw new InvalidOperationException("JWT_SECRET_KEY environment variable is missing or empty!");
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
             {
-                new Claim("username", account.UserName),
-                new Claim("firstName", account.FirstName),
-                new Claim("lastName", account.LastName),
-                new Claim("id" , account.Id.ToString())
+                new Claim(JwtRegisteredClaimNames.Sub, account.UserName),
+                new Claim("id", account.Id.ToString()),
+                new Claim("name", $"{account.FirstName} {account.LastName}")
             };
-            var JwtToken = new JwtSecurityToken(
+
+            var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.UtcNow.Add(_options.Value.TokenLifetime),
-                signingCredentials: new SigningCredentials(
-                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Value.SecretKey)),
-                    SecurityAlgorithms.HmacSha256)
+                expires: DateTime.UtcNow.AddMinutes(30),
+                signingCredentials: creds
             );
-            return new JwtSecurityTokenHandler().WriteToken(JwtToken);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
-    

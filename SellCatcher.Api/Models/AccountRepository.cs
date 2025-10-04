@@ -11,6 +11,10 @@ namespace SellCatcher.Api.Models
 
         public void Add(Account account)
         {
+            if (account.UserName == null)
+            {
+                throw new ArgumentNullException(nameof(account.UserName), "UserName cannot be null.");
+            }
             _accounts[account.UserName] = account;
         }
         public Account? GetByUserName(string userName)
