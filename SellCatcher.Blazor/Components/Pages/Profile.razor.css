@@ -2,7 +2,8 @@
     text-align: center;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;}
+    min-height: 50vh;
+}
 
 .avatar {
     width: 120px;
@@ -27,16 +28,30 @@
 .info-box {
     flex: 1;
     min-width: 250px;
-    max-width: 380px;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
-    border-radius: 10px;
+    max-width: 480px;
+    background-color: #e2e2e25d;
+    border:hidden;
+    border-radius: 50px;
     padding: 20px;
     text-align: left;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    -webkit-border-radius: 50px;
+    -moz-border-radius: 50px;
+    -ms-border-radius: 50px;
+    -o-border-radius: 50px;
 }
 .redact-button{
-    width: 50px;
-    height:50px;
-    border:1px;
-
+    width: 0px;
+    height:0px;
+    border:none;
+}
+p[prof-text]{
+    size:10px;
+    font-weight: 700;
+    margin: 0px;
+}
+.divider {
+    height: 2px;
+    opacity: 1;
+    background-color: #000000;
 }

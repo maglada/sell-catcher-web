@@ -5,8 +5,8 @@
         {
         <button href = "/product/{@ProductId}" class="product-button">
             <img src="@product.ImageUrl" alt="@product.Name" />
+            <span class="price">від @product.Price.ToString(format: "C", new System.Globalization.CultureInfo("uk-UA"))</span>
             <span class="name">@product.Name</span>
-            <span class="price">@product.Price.ToString(format: "C")</span>
         </button>
         }
     }
@@ -17,9 +17,11 @@
     [Parameter] public int filteredPriceMax { get; set; }
     public class Product
     {
+        public string Id {get; set; } = "";
         public string Name { get; set; } = "";
         public decimal Price { get; set; }
         public string ImageUrl { get; set; } = "";
+        public string Shop {get;set; } = "";
     }
     public string ProductId {get; set; } = "1";
 
