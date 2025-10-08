@@ -10,7 +10,7 @@ namespace SellCatcher.Api.Services
 {
     public class DatabaseService
     {
-        private readonly string _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "prices.db");
+        private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
 
         public void AddShop1Product(Shop1Product p)
         {

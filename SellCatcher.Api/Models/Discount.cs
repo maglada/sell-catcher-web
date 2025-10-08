@@ -1,7 +1,15 @@
-namespace DiscountsApi.Models
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using LiteDB;
+
+namespace SellCatcher.Api.Models
 {
     public class Discount
     {
+        [BsonId]
         public int Id { get; set; }
         public int StoreId { get; set; }
         public string Product { get; set; } = ""; 

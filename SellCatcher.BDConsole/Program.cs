@@ -31,5 +31,16 @@ class Program
         {
 
         }
+        var rep = new AccountRepository();
+
+        var user = new User
+        {
+            UserName = "Max",
+            Email = "Apple@icloud.com",
+            PasswordHash = "11111",
+            Is18 = true
+        };
+
+        rep.Add(user);
     }
 }
