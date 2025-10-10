@@ -1,3 +1,4 @@
+
 /*using Microsoft.AspNetCore.Mvc;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
@@ -5,6 +6,7 @@ using SellCatcher.Api.Services;
 // DiscountService не добавлял, потому-что Виталик сказал что не нужно. Но если нужно, могу добавить. 
 
 namespace SellCatcher.Api.Controllers
+
 {
     [ApiController]
     [Route("api/[controller]")]
