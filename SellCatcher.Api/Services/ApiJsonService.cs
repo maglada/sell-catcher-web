@@ -12,30 +12,30 @@ namespace SellCatcher.Api.Services
 {
     public class ApiJson
     {
-        private readonly string _apiShop1Url;
-        private readonly string _apiShop2Url;
+        private readonly string _apiAtbUrl;
+        private readonly string _apiNovusUrl;
         private readonly string _jsonPath;
 
-        public ApiJson(string apiShop1Url, string apiShop2Url, string jsonPath)
+        public ApiJson(string apiAtbUrl, string apiNovusUrl, string jsonPath)
         {
-            _apiShop1Url = apiShop1Url.Trim();
-            _apiShop2Url = apiShop2Url.Trim();
+            _apiAtbUrl = apiAtbUrl.Trim();
+            _apiNovusUrl = apiNovusUrl.Trim();
             _jsonPath = string.IsNullOrWhiteSpace(jsonPath) ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "shopdata.json") : jsonPath;
         }
 
-        public (List<Shop1Product> shop1, List<Shop2Product> shop2) LoadData()
+        public (List<ATBProduct> atb, List<NOVUSProduct> novus) LoadData()
         {
             
-            if (!string.IsNullOrWhiteSpace(_apiShop1Url) && !string.IsNullOrWhiteSpace(_apiShop2Url))
+            if (!string.IsNullOrWhiteSpace(_apiAtbUrl) && !string.IsNullOrWhiteSpace(_apiNovusUrl))
             {
                 try
                 {
                     using var client = new HttpClient();
-                    var s1 = client.GetStringAsync(_apiShop1Url).Result;
-                    var s2 = client.GetStringAsync(_apiShop2Url).Result;
+                    var s1 = client.GetStringAsync(_apiAtbUrl).Result;
+                    var s2 = client.GetStringAsync(_apiNovusUrl).Result;
 
-                    var list1 = JsonSerializer.Deserialize<List<Shop1Product>>(s1);
-                    var list2 = JsonSerializer.Deserialize<List<Shop2Product>>(s2);
+                    var list1 = JsonSerializer.Deserialize<List<ATBProduct>>(s1);
+                    var list2 = JsonSerializer.Deserialize<List<NOVUSProduct>>(s2);
 
                     if (list1 != null && list2 != null)
                         return (list1, list2);
@@ -52,8 +52,8 @@ namespace SellCatcher.Api.Services
                 {
                     var json = File.ReadAllText(_jsonPath);
                     var wrapper = JsonSerializer.Deserialize<JsonWrapper>(json);
-                    if (wrapper?.Shop1 != null && wrapper?.Shop2 != null)
-                        return (wrapper.Shop1, wrapper.Shop2);
+                    if (wrapper?.atb != null && wrapper?.novus != null)
+                        return (wrapper.atb, wrapper.novus);
                 }
                 catch (Exception)
                 {
@@ -65,8 +65,8 @@ namespace SellCatcher.Api.Services
 
         private class JsonWrapper
         {
-            public List<Shop1Product>? Shop1 { get; set; }
-            public List<Shop2Product>? Shop2 { get; set; }
+            public List<ATBProduct>? atb { get; set; }
+            public List<NOVUSProduct>? novus { get; set; }
         }
     }
 }

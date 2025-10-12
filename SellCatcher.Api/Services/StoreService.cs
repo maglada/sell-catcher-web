@@ -1,6 +1,12 @@
-using DiscApi.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using LiteDB;
+using SellCatcher.Api.Models;
 
-namespace DiscApi.Services
+namespace SellCatcher.Api.Services
 {
     public class StoreService
     {
