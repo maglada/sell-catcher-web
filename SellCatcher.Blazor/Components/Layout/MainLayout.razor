@@ -38,3 +38,18 @@
     </footer>
 
 </div>
+
+@if (!IsRegistered)
+{
+    <Registration OnClose="HideModal" />
+}
+
+@code {
+    private bool IsRegistered = false;
+
+    private void HideModal()
+    {
+        IsRegistered = true;
+        StateHasChanged();
+    }
+}
