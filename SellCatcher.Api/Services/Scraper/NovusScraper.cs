@@ -1,12 +1,12 @@
+using System;
 using System.IO;
-using Microsoft.Playwright;
-using System.Text.RegularExpressions;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Linq;
-using SellCatcher.Api.Models;
+using ProductScraper;
+using ProductScraper.Services;
 
-class Scraper
+namespace ProductScraper.Services
 {
     public static async Task<(List<NOVUSProduct>, List<Discount>)> RunScraper()
     {
@@ -22,39 +22,33 @@ class Scraper
 
         // Launch Chromium in headless mode (with 1s slowdown to debug interactions)
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+    /// <summary>
+    /// Service for initializing and managing product scraping operations (JSON only)
+    /// </summary>
+    public class ScraperService
+    {
+        private readonly ScraperFactory _factory;
+        private readonly ScraperConfig _config;
+        private readonly string _outputDirectory;
+        private readonly JsonExportService _jsonExporter;
+
+        public ScraperService() : this(CreateDefaultConfig(), "output")
         {
-            Headless = true,
-            SlowMo = 1000
-        });
+        }
 
-        // Configure browser context with realistic headers & settings
-        var context = await browser.NewContextAsync(new()
+        public ScraperService(ScraperConfig config, string outputDirectory = "output")
         {
-            IgnoreHTTPSErrors = true,
-            JavaScriptEnabled = true,
-            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/116.0.0.0 Safari/537.36",
-            ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
-            Locale = "uk-UA",
-            ExtraHTTPHeaders = new Dictionary<string, string>
-            {
-                ["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                ["Accept-Language"] = "uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7",
-                ["Cache-Control"] = "no-cache",
-                ["Pragma"] = "no-cache"
-            }
-        });
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _outputDirectory = outputDirectory ?? "output";
+            _factory = new ScraperFactory(_config);
+            _jsonExporter = new JsonExportService(prettyPrint: true);
+            
+            Directory.CreateDirectory(_outputDirectory);
+        }
 
-        var page = await context.NewPageAsync();
-
-        // Hook console & page error messages from the browser
-        page.Console += (_, msg) => Console.WriteLine($"BROWSER: {msg.Text}");
-        page.PageError += (_, err) => Console.WriteLine($"PAGE ERROR: {err}");
-
-        foreach (var catalogUrl in catalogUrls)
+        public static ScraperConfig CreateDefaultConfig()
         {
-            if (string.IsNullOrWhiteSpace(catalogUrl)) continue;
-
-            try
+            return new ScraperConfig
             {
                 Console.WriteLine($"Navigating to catalog: {catalogUrl}");
                 await page.GotoAsync(catalogUrl);
@@ -171,9 +165,49 @@ class Scraper
                     var text = (await product.InnerTextAsync())?.Trim();
 
                     if (string.IsNullOrEmpty(text)) continue;
+                Headless = true,
+                SlowMo = 1000,
+                EnableLogging = true,
+                EnableDebugOutput = false,
+                SaveDebugScreenshots = false,
+                SaveErrorScreenshots = true
+            };
+        }
 
-                    // Skip duplicate texts
-                    if (!seen.Add(text)) continue;
+        /// <summary>
+        /// Processes all files and exports to JSON
+        /// </summary>
+        public async Task<Dictionary<string, List<Product>>> ProcessAllFilesAsync(
+            string directory = "sites", 
+            string filePattern = "NovusLinks_*.txt")
+        {
+            Console.WriteLine($"=== Processing all {filePattern} files from {directory} ===");
+            
+            var results = await _factory.ProcessAllFilesAsync(directory, filePattern);
+            
+            PrintSummary(results);
+            ExportAllToJson(results);
+            
+            return results;
+        }
+
+        /// <summary>
+        /// Processes a single file and exports to JSON
+        /// </summary>
+        public async Task<List<Product>> ProcessSingleFileAsync(string filePath)
+        {
+            Console.WriteLine($"=== Processing file: {filePath} ===");
+            
+            var products = await _factory.ProcessFileAsync(filePath);
+            
+            Console.WriteLine($"Found {products.Count} products");
+            
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            var outputFile = Path.Combine(_outputDirectory, $"{fileName}_products.json");
+            _jsonExporter.ExportWithMetadata(products, outputFile);
+            
+            return products;
+        }
 
                     // Normalize spaces and replace non-breaking space
                     text = text.Replace("\u00A0", " ");
@@ -181,18 +215,25 @@ class Scraper
 
                     // Quick filtering to avoid noise
                     if (ShouldSkipText(text)) continue;
+        /// <summary>
+        /// Exports all results to JSON files
+        /// </summary>
+        private void ExportAllToJson(Dictionary<string, List<Product>> results)
+        {
+            Console.WriteLine("\n=== Exporting to JSON ===");
 
-                    // DEBUG: Log any text that contains percentage to see what we're missing
-                    if (text.Contains("%"))
-                    {
-                        Console.WriteLine($"DEBUG: Found text with percentage: '{text}'");
-                    }
+            // Export each file's products separately
+            foreach (var kvp in results)
+            {
+                var fileName = Path.GetFileNameWithoutExtension(kvp.Key);
+                var outputFile = Path.Combine(_outputDirectory, $"{fileName}_products.json");
+                _jsonExporter.ExportWithMetadata(kvp.Value, outputFile);
+            }
 
-                    // DEBUG: Log any text that has multiple ₴ symbols (likely sale items)
-                    if (Regex.Matches(text, @"₴").Count > 1)
-                    {
-                        Console.WriteLine($"DEBUG: Found text with multiple prices: '{text}'");
-                    }
+            // Export all products combined
+            var allProducts = results.Values.SelectMany(p => p).ToList();
+            var allProductsFile = Path.Combine(_outputDirectory, "all_products.json");
+            _jsonExporter.ExportWithMetadata(allProducts, allProductsFile);
 
                     // Regex patterns:
                     // salePattern: Based on the actual format from debug output
@@ -317,10 +358,44 @@ class Scraper
                 }
             }
             catch (Exception ex)
+            // Export all sale items
+            var saleProductsFile = Path.Combine(_outputDirectory, "all_sales.json");
+            _jsonExporter.ExportSaleItems(allProducts, saleProductsFile);
+
+            // Export by category
+            var categoryDir = Path.Combine(_outputDirectory, "by_category");
+            _jsonExporter.ExportByCategory(allProducts, categoryDir);
+
+            Console.WriteLine("\n=== Export Complete ===");
+        }
+
+        private void PrintSummary(Dictionary<string, List<Product>> results)
+        {
+            Console.WriteLine($"\n=== SCRAPING COMPLETE ===");
+            Console.WriteLine($"Processed {results.Count} files");
+            
+            int totalProducts = 0;
+            int totalSaleItems = 0;
+            
+            foreach (var kvp in results)
             {
-                Console.WriteLine($"Error at {catalogUrl}: {ex.Message}");
-                await page.ScreenshotAsync(new PageScreenshotOptions { Path = "error.png", FullPage = true });
+                var fileName = kvp.Key;
+                var products = kvp.Value;
+                var saleCount = products.Count(p => p.IsOnSale);
+                
+                totalProducts += products.Count;
+                totalSaleItems += saleCount;
+                
+                Console.WriteLine($"\n{fileName}:");
+                Console.WriteLine($"  Total products: {products.Count}");
+                Console.WriteLine($"  Sale items: {saleCount}");
+                Console.WriteLine($"  Regular items: {products.Count - saleCount}");
             }
+            
+            Console.WriteLine($"\nGRAND TOTAL:");
+            Console.WriteLine($"  Total products: {totalProducts}");
+            Console.WriteLine($"  Sale items: {totalSaleItems}");
+            Console.WriteLine($"  Regular items: {totalProducts - totalSaleItems}");
         }
 
         await context.CloseAsync();
@@ -420,6 +495,14 @@ class Scraper
         cleanName = Regex.Replace(cleanName, @"\s+", " ").Trim();
 
         return $"{cleanName}_{price}";
+        // Helper methods for filtering
+        public List<Product> FilterByCategory(List<Product> products, string category) =>
+            products.Where(p => p.Category?.Equals(category, StringComparison.OrdinalIgnoreCase) ?? false).ToList();
+
+        public List<Product> GetSaleProducts(List<Product> products) =>
+            products.Where(p => p.IsOnSale).ToList();
+        
+        public Dictionary<string, List<Product>> GroupByCategory(List<Product> products) =>
+            products.GroupBy(p => p.Category ?? "Unknown").ToDictionary(g => g.Key, g => g.ToList());
     }
 }
-

@@ -10,7 +10,7 @@ namespace SellCatcher.Api.Services
 {
     public class AccountService(AccountRepository accountRepository, JWTService jwtService)
     {
-        public void Register(string userName, string firstName, string lastName, string password)
+        public void Register(string? userName, string? firstName, string? lastName, string password)
         {
             // Hash the password (for simplicity, using plain text here; use a proper hashing algorithm in production)
             var passwordHash = password; // Replace with actual hashing
@@ -35,6 +35,10 @@ namespace SellCatcher.Api.Services
             }
 
             var passwordHasher = new PasswordHasher<Account>();
+            if (string.IsNullOrEmpty(account.PasswordHash))
+            {
+                throw new Exception("Unauthorized");
+            }
             var result = passwordHasher.VerifyHashedPassword(account, account.PasswordHash, password);
             if (result == PasswordVerificationResult.Success)
             {

@@ -1,0 +1,44 @@
+<div class="price-range-container">
+    <div class="slider-wrapper">
+        <div class="slider-track" style="@TrackStyle"></div>
+        <input type="range" min="@Min" max="@Max" value="@MinValue" @oninput="OnMinChanged">
+        <input type="range" min="@Min" max="@Max" value="@MaxValue" @oninput="OnMaxChanged">
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Min { get; set; } = 0;
+    [Parameter] public int Max { get; set; } = 100;
+    [Parameter] public int Step { get; set; } = 1;
+
+    [Parameter] public EventCallback<(int, int)> OnRangeChanged { get; set; }
+
+    private int MinValue = 0;
+    private int MaxValue = 100;
+    private string TrackStyle = "";
+
+    protected override void OnInitialized() => UpdateTrack();
+
+    private void OnMinChanged(ChangeEventArgs e)
+    {
+        MinValue = int.Parse(e.Value!.ToString()!);
+        if (MaxValue - MinValue < Step) MinValue = MaxValue - Step;
+        UpdateTrack();
+    }
+
+    private void OnMaxChanged(ChangeEventArgs e)
+    {
+        MaxValue = int.Parse(e.Value!.ToString()!);
+        if (MaxValue - MinValue < Step) MaxValue = MinValue + Step;
+        UpdateTrack();
+    }
+
+    private void UpdateTrack()
+    {
+        double p1 = (double)(MinValue - Min) / (Max - Min) * 100;
+        double p2 = (double)(MaxValue - Min) / (Max - Min) * 100;
+        TrackStyle = $"background: linear-gradient(to right, #ddd {p1}%, #000 {p1}%, #000 {p2}%, #ddd {p2}%);";
+
+        OnRangeChanged.InvokeAsync((MinValue, MaxValue)); // повідомляємо сторінку
+    }
+}
