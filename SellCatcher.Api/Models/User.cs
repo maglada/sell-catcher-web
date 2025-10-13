@@ -1,4 +1,4 @@
-namespace DiscApi.Models
+namespace  SellCatcher.Api.Models
 {
     public class User
     {

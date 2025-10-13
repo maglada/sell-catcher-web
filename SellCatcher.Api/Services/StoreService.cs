@@ -1,6 +1,6 @@
-using DiscApi.Models;
+using SellCatcher.Api.Models;
 
-namespace DiscApi.Services
+namespace  SellCatcher.Api.Services
 {
     public class StoreService
     {
