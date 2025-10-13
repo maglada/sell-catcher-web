@@ -1,0 +1,90 @@
+<div class="modal-overlay" @onclick="OnBackdropClick">
+    <div class="@Class" @onclick:stopPropagation>
+           <div class="actions">
+                <input type="radio" name="auth" id="SignIn" checked @onclick="SignTypeIn">
+                <label for="SignIn" class="button">Вхід</label>
+
+                <input type="radio" name="auth" id="SignUp" checked @onclick="SignTypeUp">
+                <label for="SignUp" class="button">Реєстрація</label>
+            </div>
+
+        @if(Enter)
+        {
+            <form>
+                <div style="margin-top:10px;">
+                    <label>Мобільний телефон</label><br />
+                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@LoginPhone">
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Пароль</label><br />
+                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind = "@LoginPassword"/>
+                </div>
+                
+            </form>
+        }
+        else{
+            <form>
+                <div style="margin-top:10px;">
+                    <label>Ім’я</label><br />
+                    <input type="text" placeholder="Введіть ім’я чи нікнейм" class="inputInfo" @bind="@RegisterName"/>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Email</label><br />
+                    <input type="email" placeholder="Введіть email" class="inputInfo" @bind="@RegisterEmail"/>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Мобільний телефон</label><br />
+                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@RegisterPhone"/>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Пароль</label><br />
+                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind="@RegisterPassword"/>
+                </div>
+
+                
+            </form>
+        }
+        <div class="actions">
+                    <button type="button" @onclick="Close" class="bottonEnter">Увійти</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    // Змінні для входу
+    string LoginPhone { get; set; } = "";
+    string LoginPassword { get; set; } = "";
+
+    // Змінні для реєстрації
+    string RegisterName { get; set; } = "";
+    string RegisterEmail { get; set; } = "";
+    string RegisterPhone { get; set; } = "";
+    string RegisterPassword { get; set; } = "";
+
+    string Class = "modal";
+    bool Enter = true;
+    [Parameter]
+    public EventCallback OnClose { get; set; }   // викликається при закритті
+    private void SignTypeIn()
+    {
+        Class = "modal";
+        Enter = true;
+    }
+    private void SignTypeUp()
+    {
+        Class="modal-reg";
+        Enter = false;
+    }
+    private void Close()
+    {
+        OnClose.InvokeAsync(); // виклик події з Layout-а
+    }
+
+    private void OnBackdropClick()
+    {
+        OnClose.InvokeAsync(); // якщо клік поза вікном — закрити
+    }
+}

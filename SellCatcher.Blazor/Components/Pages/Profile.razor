@@ -7,11 +7,14 @@
         
 
         <div class="info-box">
-            <h3>Персональна інформація</h3>
-            <button @onclick="ToggleEdit">@buttonText</button>
+            <p prof-text>Персональна інформація
+            <button @onclick="ToggleEdit" class="redact-button"><img src="@iconSrc" /></button><br />
+            </p>
+            <hr class="divider" />
 
+            
             <div>
-                <b>П.І.Б:</b>
+                <p prof-text>П.І.Б:</p>
                 @if (isEditing)
                 {
                     <input @bind="User.FullName" />
@@ -20,10 +23,10 @@
                 {
                     <span>@User.FullName</span>
                 }
-            </div>
+            </div><br />
 
             <div>
-                <b>Дата народження:</b>
+                <p prof-text>Дата народження:</p>
                 @if (isEditing)
                 {
                     <input type="date" @bind="User.BirthDate" />
@@ -32,16 +35,17 @@
                 {
                     <span>@User.BirthDate.ToShortDateString()</span>
                 }
-            </div>
+            </div><br />
 
             <div>
-                <b>Стать:</b>
+                <p prof-text>Стать:</p>
                 @if (isEditing)
                 {
                     <select @bind="User.Gender">
-                        <option value="Невідомо">Невідомо</option>
                         <option value="Чоловік">Чоловік</option>
                         <option value="Жінка">Жінка</option>
+                        <option value="Інше">Інше</option>
+
                     </select>
                 }
                 else
@@ -49,13 +53,14 @@
                     <span>@User.Gender</span>
                 }
             </div>
-        </div>
+        </div><br />
 
         <div class="info-box">
-            <h3>Контакти</h3>
+            <p prof-text>Контакти</p>
+            <hr class="divider" />
 
             <div>
-                <b>E-mail:</b>
+                <p prof-text>E-mail: </p>
                 @if (isEditing)
                 {
                     <input @bind="User.Email" />
@@ -64,10 +69,20 @@
                 {
                     <span>@User.Email</span>
                 }
-            </div>
-
+            </div><br />
             <div>
-                <b>Мобільний телефон:</b>
+                <p prof-text>Пароль: </p>
+                @if (isEditing)
+                {
+                    <input @bind="User.Password" />
+                }
+                else
+                {
+                    <span>@User.Password</span>
+                }
+            </div><br />
+            <div>
+                <p prof-text>Мобільний телефон: </p>
                 @if (isEditing)
                 {
                     <input @bind="User.Phone" />
@@ -82,8 +97,9 @@
 </div>
 @code {
     private bool isEditing = false;
-    private string buttonText = "Изменить";
-
+    private string buttonText = "Змінити";
+    private string iconSrc = "icons/pencil.svg";
+ 
     private UserInfo User = new UserInfo
     {
         FullName = "Прізвище Ім'я По-батькові",
@@ -91,13 +107,15 @@
         Gender = "Невідомо",
         Email = "email@gmail.com",
         Phone = "+380 67 123 45 67",
-        Password = ""
+        Password = "12345678a"
     };
 
     private void ToggleEdit()
     {
         isEditing = !isEditing;
-        buttonText = isEditing ? "Зберегти" : "Изменить";
+        buttonText = isEditing ? "Зберегти" : "Змінити";
+        iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg";
+
     }
 
     public class UserInfo

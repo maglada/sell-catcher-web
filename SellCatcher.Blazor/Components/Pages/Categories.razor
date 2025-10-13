@@ -1,29 +1,29 @@
 @page "/categories"
-<h3>Категорії</h3>
-<p>Тут будуть категорії товарів.</p>
-<p>Сторінка номер @ProductId</p>
+<div class="search-bar-box">
+    <SearchBar />
+</div>
 
 <div class="page-layout">
     <aside class="sidebar">
-        <h3>Фільтри</h3>
-        <h2>Ціна</h2>
         <div>
-            <label>Мін: @MinPrice грн</label><br>
-            <input @bind="MinPrice" />
-            <input type="range" min="0" max="100" step="1" @bind="MinPrice" />
-
-            <label>Макс: @MaxPrice грн</label>
-            <input @bind="MaxPrice" />
-            <input type="range" min="0" max="100" step="1" @bind="MaxPrice" />
-            <p>Вибраний діапазон: від @MinPrice до @MaxPrice грн</p>
+        <p>Ключові слова</p>
         </div>
-        <h3>Назва</h3>
-
-
+        <div>
+        <p>Магазин</p>
+        </div>
+        <div>
+            <p>Ціна</p>
+           <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChanged" />
+           @MinPrice₴ - @MaxPrice₴
+        </div>
+        <div>
+        </div>
+        <div>
+        </div>
     </aside>
 
     <main class="content">
-        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"/>          <!-- тут визивається лист з продуктів в категорії -->
+        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"/>
     </main>
 
 </div>
@@ -31,5 +31,9 @@
     [Parameter] public string ProductId { get; set; }
     private int MinPrice = 0;
     private int MaxPrice = 100;
-
+    private void OnRangeChanged((int, int) range)
+    {
+        (MinPrice, MaxPrice) = range;
+        if(MinPrice > MaxPrice) MinPrice = MaxPrice;
+    }
 }

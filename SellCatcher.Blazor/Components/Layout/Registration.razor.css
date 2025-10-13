@@ -1,0 +1,119 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+}
+
+.modal{
+  position: relative;
+  background: #fff;
+  border-radius: 30px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  width: 400px;
+  height: 300px;
+  overflow-y: auto;
+  padding: 1.25rem;
+  z-index: 1001;
+  display: block;
+  -webkit-border-radius: 30px;
+  -moz-border-radius: 30px;
+  -ms-border-radius: 30px;
+  -o-border-radius: 30px;
+}
+.modal-reg{
+  position: relative;
+  background: #fff;
+  border-radius: 30px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  width: 400px;
+  height: 400px;
+  overflow-x: hidden;
+  padding: 1.25rem;
+  z-index: 1001;
+  display: block;
+  -webkit-border-radius: 30px;
+  -moz-border-radius: 30px;
+  -ms-border-radius: 30px;
+  -o-border-radius: 30px;
+}
+
+form{
+  position:relative;
+  left:10%
+}
+
+.actions {
+  display:inline-flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.actions input[type="radio"] {
+  display: none;
+}
+
+.bottonEnter{
+  position: relative;
+  top:30px;
+  left:33%;
+  height:30px;
+  width:35%;
+  background-color: rgb(233, 181, 10);;
+  border:none;
+  border-radius: 20px;
+  -webkit-border-radius: 20px;
+  -moz-border-radius: 20px;
+  -ms-border-radius: 20px;
+  -o-border-radius: 20px;
+}
+
+/* Стилізація кнопок */
+.button {
+  flex: 1;
+  text-align: center;
+  padding: 10px 10;
+  cursor: pointer;
+  position:relative;
+  font-weight: 500;
+}
+
+/* Лінія під кнопкою */
+.button::after {
+  content: "";
+  display:block;
+  width: 130%;
+  height: 3px;
+  background-color: black;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+  margin-top: 8px;
+  margin-left: -20px;
+  -webkit-transition: opacity 0.3s ease;
+  -moz-transition: opacity 0.3s ease;
+  -ms-transition: opacity 0.3s ease;
+  -o-transition: opacity 0.3s ease;
+}
+
+#SignIn:checked + .button::after,
+#SignUp:checked + .button::after {
+  opacity: 1;
+}
+
+.inputInfo{
+  text-align: center;
+  border-color:black;
+  border-width: 1px;
+  border-radius: 20px;
+  width: 80%;
+  -webkit-border-radius: 20px;
+  -moz-border-radius: 20px;
+  -ms-border-radius: 20px;
+  -o-border-radius: 20px;
+}
+
