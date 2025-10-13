@@ -10,32 +10,37 @@ namespace SellCatcher.Api.Services
 {
     public class DatabaseService
     {
-        private readonly string _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "prices.db");
+        private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
 
-        public void AddShop1Product(Shop1Product p)
+        public void AddAtbProduct(ATBProduct p)
         {
             using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Shop1Product>("shop1");
+            var col = db.GetCollection<ATBProduct>("atb");
             col.Insert(p);
         }
 
-        public void AddShop2Product(Shop2Product p)
+        public void AddNovusProduct(NOVUSProduct p)
         {
             using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Shop2Product>("shop2");
+            var col = db.GetCollection<NOVUSProduct>("novus");
             col.Insert(p);
+
+            Console.WriteLine($"💾 Добавлен товар: {p.Name} — {p.Price} ₴");
         }
 
-        public List<Shop1Product> GetShop1Products()
+        public List<ATBProduct> GetAtbProducts()
         {
             using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Shop1Product>("shop1").FindAll().ToList();
+            return db.GetCollection<ATBProduct>("atb").FindAll().ToList();
         }
 
-        public List<Shop2Product> GetShop2Products()
+        public List<NOVUSProduct> GetNovusProducts()
         {
             using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Shop2Product>("shop2").FindAll().ToList();
+            var products = db.GetCollection<NOVUSProduct>("novus").FindAll().ToList();
+
+            Console.WriteLine($"📦 В базе найдено {products.Count} товаров Novus.");
+            return products;
         }
 
         public void SaveComparison(Comparison c)
