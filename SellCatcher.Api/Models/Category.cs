@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,12 +7,10 @@ using LiteDB;
 
 namespace SellCatcher.Api.Models
 {
-    public class Store
+    [BsonId]
+    public class Category
     {
-        [BsonId]
-        public int Id { get; set; }
         public string Name { get; set; } = "";
-
-        public List<Category> Categories { get; set; } = new();
+        public List<NOVUSProduct> Products { get; set; } = new();
     }
 }
