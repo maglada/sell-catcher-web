@@ -6,34 +6,67 @@
 <div class="page-layout">
     <aside class="sidebar">
         <div>
-        <p>Ключові слова</p>
+            Ключові слова
         </div>
+
         <div>
-        <p>Магазин</p>
+            Країна<br />
+            <input type="checkbox" name="contry" id="Moroko"> Мороко<br />
+            <input type="checkbox" name="contry" id="Brazil"> Бразилія<br />
+            <input type="checkbox" name="contry" id="Turkey"> Туреччина<br />
+            <input type="checkbox" name="contry" id="China"> Чина<br />
+            <input type="checkbox" name="contry" id="Ukraine"> Україна<br />
         </div>
+
         <div>
-            <p>Ціна</p>
-           <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChanged" />
-           @MinPrice₴ - @MaxPrice₴
+            <p>Ціна @MinPrice₴ - @MaxPrice₴</p>
+            <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
+
+            <p></p>
         </div>
+
+        <div>
+            Фасування
+            <input type="checkbox" name="packaging" id="packeged"> Фасований<br />
+            <input type="checkbox" name="packaging" id="gravimetric"> Грамовий
+        </div>
+
+        <div>
+
+        </div>
+
+        <div>
+            <p>Магазин</p>
+            <input type="checkbox" @bind="ShowATB" /> АТБ<br />
+            <input type="checkbox" @bind="ShowNovus" /> Новус
+        </div>
+
         <div>
         </div>
-        <div>
-        </div>
+
     </aside>
 
     <main class="content">
-        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"/>
+        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
     </main>
 
 </div>
 @code {
-    [Parameter] public string ProductId { get; set; }
+    private bool ShowATB = true;
+    private bool ShowNovus = true;
     private int MinPrice = 0;
     private int MaxPrice = 100;
-    private void OnRangeChanged((int, int) range)
+
+    private List<string> GetSelectedShops()
+    {
+        var list = new List<string>();
+        if (ShowATB) list.Add("АТБ");
+        if (ShowNovus) list.Add("Новус");
+        return list;
+    }
+
+    private void OnRangeChangedPrice((int, int) range)
     {
         (MinPrice, MaxPrice) = range;
-        if(MinPrice > MaxPrice) MinPrice = MaxPrice;
     }
 }

@@ -5,21 +5,26 @@
     <!-- Спільний Header -->
     <header class="site-header">
         <div class="logo-block">
-        <div><a href="/">Лого</a></div>
-        <SimpleDropDownButton 
-            DropDownContent = "Category|/categories, Home Page|/">
-                <img src="icons/layout-grid.svg"/>
+            <div><a href="/">Лого</a></div>
+            <SimpleDropDownButton DropDownContent="Category|/categories, Home Page|/">
+                <img src="icons/layout-grid.svg" />
                 Каталог
-        </SimpleDropDownButton>
-         </div>   
+            </SimpleDropDownButton>
+        </div>
         <a href='/profile'>
-            <button class="button-yellow"><img src="icons/user.svg"/>Profile</button>    
-         </a>
-         <!--<button onclick="window.location.href='/profile'">Profile</button>
+            <button class="button-yellow"><img src="icons/user.svg" />Profile</button>
+        </a>
+        <!--<button onclick="window.location.href='/profile'">Profile</button>
          закоментований варіант повністью перезавантажує 
          сторінку через що з'являється загрузка, 
          коли в той же час, варіант з <a> відразу переходе на посилання,
          в результаті чого працює без загрузки-->
+        <!--<button class="button-yellow" @onclick="@bucketOn"><img src="icons/shopping-cart.svg"/>Кошик</button>
+        @if (boolbucketOn == true)
+        {
+                    Bucket />
+                }
+-->
     </header>
 
     <!-- Тіло -->
@@ -46,10 +51,17 @@
 
 @code {
     private bool IsRegistered = false;
+    bool boolbucketOn = false;
 
     private void HideModal()
     {
         IsRegistered = true;
         StateHasChanged();
+    }
+
+    private void bucketOn()
+    {
+        boolbucketOn = !boolbucketOn;
+
     }
 }

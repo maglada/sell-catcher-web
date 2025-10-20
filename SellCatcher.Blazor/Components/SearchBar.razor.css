@@ -1,57 +1,58 @@
 .search-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 400px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
 }
 
 .search-icon {
-    position:absolute;
-    right: 10px;            /* 🔹 розміщення справа */
-    top: 27px;
-    width: 15px;
-    height: 15px;
-    opacity: 0.6;
-    pointer-events: none;
+  position: absolute;
+  right: 10px; /* 🔹 розміщення справа */
+  top: 27px;
+  width: 15px;
+  height: 15px;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .search-bar {
-    margin-top: 1rem;
-    width: 400px;
-    height: 35px;
-    outline: none;
-    border-style: hidden;
-    border-radius: 12px;
-    padding-right: 35px;    /* 🔹 тепер відступ праворуч */
-    background-color: #f8f8f8;
-    font-size: 15px;
+  margin-top: 1rem;
+  width: 400px;
+  height: 35px;
+  outline: none;
+  border-style: hidden;
+  border-radius: 12px;
+  padding-right: 35px; /* 🔹 тепер відступ праворуч */
+  background-color: #f8f8f8;
+  font-size: 15px;
 }
 
 .search-bar:focus {
-    box-shadow: 0 0 5px rgba(255, 200, 0, 0.5);
-    background-color: white;
+  transition: 0.3s;
+  box-shadow: 0 0 5px rgba(255, 200, 0, 0.5);
+  background-color: white;
 }
 
 .suggestions-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    position: absolute;
-    top: 100%;
-    width: 100%;
-    background: white;
-    border: 1px solid #ccc;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    border-radius: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 100%;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  border-radius: 8px;
 }
 
 .suggestions-list li {
-    padding: 8px;
-    cursor: pointer;
+  padding: 8px;
+  cursor: pointer;
 }
 
 .suggestions-list li:hover {
-    background: #f0f0f0;
+  background: #f0f0f0;
 }
