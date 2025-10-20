@@ -13,7 +13,15 @@ namespace SellCatcher.Api.Services
     {
         public class ProductService
         {
-            private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
+            private readonly string _dbPath;
+            public ProductService()
+            {
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+                var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+
+                _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
+            }
 
             public int SaveProducts(List<Product> parserProducts, string storeName = "NOVUS")
             {
