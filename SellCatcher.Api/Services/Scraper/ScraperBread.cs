@@ -1,10 +1,11 @@
-using System;
-using System.IO;
 using Microsoft.Playwright;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ProductScraper
 {
@@ -107,83 +108,97 @@ namespace ProductScraper
 
             // Try to find product elements by multiple selector variations
             var productElements = await page.QuerySelectorAllAsync(
-                ".product-tile[data-testid*='product'], " +
-                ".product-card:not(.product-card__price), " +
-                "[class*='ProductTile'], " +
-                "[class*='jsx-a1615c42095f26c8 Price__value_caption Price__value_discount']"
+                "[data-testid*='product-tile'], .ProductTile, .ProductTileLink"
             );
-            
-            if (_config.EnableLogging)
-                Console.WriteLine($"Found {productElements.Count} products");
-            
-            var seen = new HashSet<string>();           // Raw product texts already processed
-            var processedProducts = new HashSet<string>(); // Products identified by unique key (name+price)
+
+            if (productElements.Count == 0)
+            {
+                var htmlPath = $"no_products_{DateTime.Now:yyyyMMddHHmmss}.html";
+                File.WriteAllText(htmlPath, html);
+                Console.WriteLine($"No products found. Saved page HTML to: {htmlPath}");
+                return products;
+            }
 
             foreach (var product in productElements)
             {
-                var text = (await product.InnerTextAsync())?.Trim();
-                if (string.IsNullOrEmpty(text)) continue;
-
-                // Skip duplicate texts
-                if (!seen.Add(text)) continue;
-
-                // Normalize spaces and replace non-breaking space
-                text = text.Replace("\u00A0", " ");
-                text = Regex.Replace(text, @"\s+", " ");
-                
-                // Quick filtering to avoid noise
-                if (ShouldSkipText(text)) continue;
-
-                // Skip very short texts that are unlikely to be valid products
-                if (text.Length < 10) continue;
-
-                if (Regex.IsMatch(text, @"^[\d.,]+\s*₴\s*(від\s*\d+\s*(шт|кг|г|л|мл)|\.\.\.)", RegexOptions.IgnoreCase))
+                try
                 {
-                    continue;
-                }
-                
+                    var nameSel = await product.QuerySelectorAsync("[data-testid='product_tile_title']");
+                    var name = nameSel != null ? (await nameSel.InnerTextAsync())?.Trim() : "";
 
-                if (Regex.IsMatch(text, @"^[\d.,]+\s*₴\s*(від\s*\d+\s*шт|\.\.\.)", RegexOptions.IgnoreCase))
-                {
-                    continue;
-                }
-                // DEBUG: Log any text that contains percentage to see what we're missing
-                if (_config.EnableDebugOutput)
-                {
-                    if (text.Contains("%"))
-                        Console.WriteLine($"DEBUG: Found text with percentage: '{text}'");
+                    var priceSel = await product.QuerySelectorAsync("[data-marker='Discounted Price'] span.Price__value_body") ??
+                                  await product.QuerySelectorAsync(".Price__value_caption") ??
+                                  await product.QuerySelectorAsync(".Price__value_unavailable") ??
+                                  await product.QuerySelectorAsync(".Price__value_discount");
+                    var newPrice = priceSel != null ? (await priceSel.InnerTextAsync())?.Trim() : "";
 
-                    // DEBUG: Log any text that has multiple ₴ symbols (likely sale items)
-                    if (Regex.Matches(text, @"₴").Count > 1)
-                        Console.WriteLine($"DEBUG: Found text with multiple prices: '{text}'");
-                }
+                    var oldPriceSel = await product.QuerySelectorAsync("[data-marker='Old Price'] span.Price__value_body") ??
+                                     await product.QuerySelectorAsync(".ProductTile_oldPrice span") ??
+                                     await product.QuerySelectorAsync(".Price__value_old");
+                    var nonDiscountPrice = oldPriceSel != null ? (await oldPriceSel.InnerTextAsync())?.Trim() : "";
 
-                var extractedProduct = ExtractProduct(text);
-                if (extractedProduct != null)
-                {
-                    var productKey = CreateProductKey(extractedProduct.Name, extractedProduct.Price.ToString());
-                    if (processedProducts.Add(productKey))
+                    var discountSel = await product.QuerySelectorAsync("[data-marker='Discount']") ??
+                                     await product.QuerySelectorAsync(".DiscountBadge") ??
+                                     await product.QuerySelectorAsync("[class*='discount']") ??
+                                     await product.QuerySelectorAsync("[class*='Discount']");
+
+                    string discount = "";
+
+                    if (discountSel != null)
                     {
-                        // Assign category to product
-                        extractedProduct.Category = _category;
-                        
-                        products.Add(extractedProduct);
-                        
-                        if (_config.EnableLogging)
-                            PrintProduct(extractedProduct);
+                        var discountText = (await discountSel.InnerTextAsync())?.Trim() ?? "";
+                        var match = Regex.Match(discountText, @"[+\-]?\d+\s*%");
+                        if (match.Success)
+                            discount = match.Value.Trim();
                     }
+
+                    string validUntil = "";
+
+                    var validUntilSel = await product.QuerySelectorAsync("[data-marker='Promotion_until_date']");
+                    if (validUntilSel != null)
+                    {
+                        validUntil = (await validUntilSel.InnerTextAsync())?.Replace("до", "").Trim() ?? "";
+                    }
+
+                    if (string.IsNullOrWhiteSpace(discount))
+                    {
+                        nonDiscountPrice = "";
+                    }
+
+                    string CleanPrice(string p) => p.Replace(" ", "").Replace(",", ".").Replace("₴", "").Trim();
+
+                    var cleanedNewPrice = CleanPrice(newPrice);
+                    var cleanedOldPrice = CleanPrice(nonDiscountPrice);
+
+                    if (!decimal.TryParse(cleanedNewPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
+                    {
+                        continue;
+                    }
+
+                    decimal? oldPrice = null;
+                    if (decimal.TryParse(cleanedOldPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal priceOld))
+                        oldPrice = priceOld;
+
+                    var p = new Product
+                    {
+                        Name = name,
+                        Price = price,
+                        OldPrice = oldPrice,
+                        Discount = discount,
+                        IsOnSale = !string.IsNullOrEmpty(discount) || oldPrice.HasValue,
+                        ValidUntil = validUntil,
+                        Category = _category
+                    };
+
+                    products.Add(p);
+                    Console.WriteLine($"Added: {p.Name} — {p.Price}₴ {(p.IsOnSale ? "(ALARM! It`s SALE)" : "")}");
                 }
-                // Log only if the text contains a price symbol but doesn't match patterns
-                else if (_config.EnableDebugOutput && text.Contains("₴"))
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"DEBUG: No match for potential product: '{text}'");
+                    Console.WriteLine($"Failed to add product: {ex.Message}");
                 }
             }
-
-            // Save screenshot after processing
-            if (_config.SaveDebugScreenshots)
-                await page.ScreenshotAsync(new PageScreenshotOptions { Path = $"final_{DateTime.Now:yyyyMMddHHmmss}.png", FullPage = true });
-
+            Console.WriteLine($"Total products added: {products.Count}");
             return products;
         }
 
