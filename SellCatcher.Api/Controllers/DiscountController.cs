@@ -6,7 +6,7 @@ namespace SellCatcher.Api.Controllers
 
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/[controller]")] /*Эндпоинт скидок*/
     public class DiscountsController : ControllerBase
     {
         private readonly DiscountService _discountService;
@@ -16,19 +16,19 @@ namespace SellCatcher.Api.Controllers
             _discountService = discountService;
         }
 
-        [HttpGet]
+        [HttpGet] /*Эндпоинт получения всех скидок*/
         public IActionResult GetAll()
         {
             return Ok(_discountService.GetAll());
         }
 
-        [HttpGet("store/{storeId}")]
+        [HttpGet("store/{storeId}")] /*Эндпоинт получения скидок по магазину*/
         public IActionResult GetByStore(int storeId)
         {
             return Ok(_discountService.GetByStore(storeId));
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}")] /*Эндпоинт получения скидки по ID*/
         public IActionResult GetById(int id)
         {
             var discount = _discountService.GetById(id);
@@ -36,11 +36,36 @@ namespace SellCatcher.Api.Controllers
             return Ok(discount);
         }
 
-        [HttpPost]
+        [HttpPost] /*Эндпоинт добавления новой скидки*/
         public IActionResult Add(Discount discount)
         {
             _discountService.Add(discount);
             return CreatedAtAction(nameof(GetById), new { id = discount.Id }, discount);
+        }
+        [HttpGet("active")] /*Эндпоинт получения активных скидок*/
+        public IActionResult GetActiveDiscounts()
+        {
+            var active = _discountService
+                .GetAll()
+                .Where(d => d.ValidUntil >= DateTime.UtcNow);
+            return Ok(active);
+        }
+        [HttpGet("store/{storeId}/active")] /*Эндпоинт получения активных скидок по магазину*/
+        public IActionResult GetDiscountsStore(int storeId)
+        {
+            var discounts = _discountService
+                .GetByStore(storeId)
+                .Where(d => d.ValidUntil >= DateTime.UtcNow);
+            return Ok(discounts);
+        }
+        [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
+        public IActionResult GetTopDeals()
+        {
+            var topDeals = _discountService
+                .GetAll()
+                .OrderByDescending(d => d.OldPrice - d.NewPrice)
+                .Take(3); 
+            return Ok(topDeals);
         }
     }
 }
