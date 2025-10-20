@@ -5,9 +5,11 @@
         @bind="searchText" 
         @bind:event="oninput"
         @bind:after="OnTextChanged"
-        class="search-input" />
+        class="search-bar"
+    />
+    <img src="icons/search.svg" class="search-icon" alt="search icon" />
 
-    @if (suggestions?.Any() == true )
+    @if (suggestions?.Any() == true)
     {
         <ul class="suggestions-list">
             @foreach (var s in suggestions)
@@ -18,10 +20,13 @@
     }
 </div>
 
+
 @code {
     private string searchText = "";
     private List<string> allItems = new() { "Пиво", "Вино", "Водка", "Віскі", "Сік", "Кава", "Чай" };
     private List<string> suggestions = new();
+    [Parameter] 
+    public string iconSearch{ get; set; } = "icons/search.svg";
 
     private void OnInputChanged(ChangeEventArgs e)
     {

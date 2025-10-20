@@ -3,6 +3,7 @@ using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
 
 namespace SellCatcher.Api.Controllers
+
 {
     [ApiController]
     [Route("api/[controller]")] /*Эндпоинт скидок*/
@@ -67,4 +68,8 @@ namespace SellCatcher.Api.Controllers
             return Ok(topDeals);
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9

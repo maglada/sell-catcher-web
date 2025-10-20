@@ -12,8 +12,8 @@ namespace SellCatcher.Api.Models
         [BsonId]
         public int Id { get; set; }
         public string ProductName { get; set; } = "";  
-        public decimal Shop1Price { get; set; }  
-        public decimal Shop2Price { get; set; }  
+        public decimal ATBPrice { get; set; }  
+        public decimal NOVUSPrice { get; set; }  
         public string CheaperIn { get; set; } = "";
         public DateTime Date { get; set; } = DateTime.UtcNow;
     }

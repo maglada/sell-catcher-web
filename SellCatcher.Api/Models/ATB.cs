@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SellCatcher.Api.Models
 {
-    public class Shop1Product
+    public class ATBProduct
     {
         [BsonId]
         public int Id { get; set; } 

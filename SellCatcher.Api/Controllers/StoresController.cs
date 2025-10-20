@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using SellCatcher.Api .Services;
+using SellCatcher.Api.Services;
 
-namespace  SellCatcher.Api.Controllers
+namespace SellCatcher.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")] /*Эндпоинт магазинов*/

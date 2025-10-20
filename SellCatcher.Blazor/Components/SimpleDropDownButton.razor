@@ -1,6 +1,6 @@
 <div style="display:inline-block; position:relative;">
     <button @onclick="ToggleDropDown"
-            style="@($"{Style}; width:{Width}; height:{Height};")">
+            asd class="button-yellow">
         @ChildContent
     </button>
 
@@ -26,6 +26,8 @@
     [Parameter] public string? Style { get; set; }
     [Parameter] public string? Width { get; set; }
     [Parameter] public string? Height { get; set; }
+    [Parameter] public string? Class { get; set; }
+
     [Parameter] public string? DropDownContent { get; set; }
 
     private bool isOpen = false;

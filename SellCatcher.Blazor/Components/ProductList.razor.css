@@ -1,8 +1,8 @@
 .products-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 20px;
-    padding: 15px;
+    gap: 5%;
+    padding:0px 0 0 0;
     max-height: 700px;
     overflow-y: auto;
     border: 2px solid #ffffff;
@@ -16,16 +16,21 @@
     align-items: center;
     gap: 8px;
     padding: 12px;
-    border: 2px solid #ccc;
+    border: 2px solid #e0e0e0;
     border-radius: 30px;
     background: #fff;
     cursor: pointer;
     transition: 0.2s ease;
-    width: 160px;
+    width: 200px;
+    height: 250px;
     -webkit-border-radius: 30px;
     -moz-border-radius: 30px;
     -ms-border-radius: 30px;
     -o-border-radius: 30px;
+    -webkit-transition: 0.2s ease;
+    -moz-transition: 0.2s ease;
+    -ms-transition: 0.2s ease;
+    -o-transition: 0.2s ease;
 }
 
 .product-button:hover {
@@ -34,8 +39,8 @@
 }
 
 .product-button img {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
     object-fit: contain;
 }
 
@@ -47,7 +52,7 @@
 }
 
 .product-button .price {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     color: #f08a00;
 }

@@ -7,11 +7,10 @@ using LiteDB;
 
 namespace SellCatcher.Api.Models
 {
-    public class Shop2Product
+    [BsonId]
+    public class Category
     {
-        [BsonId]
-        public int Id { get; set; }
-        public string Name { get; set; } = "";  
-        public decimal Price { get; set; }  
+        public string Name { get; set; } = "";
+        public List<NOVUSProduct> Products { get; set; } = new();
     }
 }

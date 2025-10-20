@@ -1,6 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using LiteDB;
 using SellCatcher.Api.Models;
 
-namespace  SellCatcher.Api.Services
+namespace SellCatcher.Api.Services
 {
     public class StoreService
     {

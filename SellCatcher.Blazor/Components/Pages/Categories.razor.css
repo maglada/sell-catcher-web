@@ -1,34 +1,47 @@
 .hero {
-    background-color: #f0efef70;
-    display: flex;
-    flex-direction: column;
-    align-items: left;
-    justify-content: left;
-    padding: 4rem 2rem;
-    border-bottom: 1px solid #cecece;
-    text-align: left;
+  background-color: #f0efef70;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: left;
+  padding: 4rem 2rem;
+  border-bottom: 1px solid #cecece;
+  text-align: left;
 }
 .page-layout {
-    display: grid;
-    grid-template-columns: 250px 1fr; /* ліва колонка 250px, права займає решту */
-    gap: 20px;
-    padding: 20px;
-    box-sizing: border-box;
-    min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px 1fr; /* ліва колонка 250px, права займає решту */
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+  min-height: 70 vh;
+}
+.search-bar-box {
+  display: flex;
+  justify-content: center;
+  background-color: #ffffff3d;
+  height: 70px;
 }
 
 .sidebar {
-    background: #fafafa;
-    border:   2px solid #3f3f3f70;
-    padding: 15px;
-    border-radius: 8px;
-    -webkit-border-radius: 8px;
-    -moz-border-radius: 8px;
-    -ms-border-radius: 8px;
-    -o-border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #3f3f3f70;
+  padding: 15px;
+  max-height: 500px;
+  border-radius: 10px;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  -ms-border-radius: 10px;
+  -o-border-radius: 10px;
 }
 
 .content {
-    padding: 15px;
-    border-radius: 8px;
+  display: grid;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+div {
+  padding: 5px;
 }

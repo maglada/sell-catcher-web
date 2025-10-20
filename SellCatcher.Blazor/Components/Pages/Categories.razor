@@ -1,35 +1,72 @@
 @page "/categories"
-<h3>Категорії</h3>
-<p>Тут будуть категорії товарів.</p>
-<p>Сторінка номер @ProductId</p>
+<div class="search-bar-box">
+    <SearchBar />
+</div>
 
 <div class="page-layout">
     <aside class="sidebar">
-        <h3>Фільтри</h3>
-        <h2>Ціна</h2>
         <div>
-            <label>Мін: @MinPrice грн</label><br>
-            <input @bind="MinPrice" />
-            <input type="range" min="0" max="100" step="1" @bind="MinPrice" />
-
-            <label>Макс: @MaxPrice грн</label>
-            <input @bind="MaxPrice" />
-            <input type="range" min="0" max="100" step="1" @bind="MaxPrice" />
-            <p>Вибраний діапазон: від @MinPrice до @MaxPrice грн</p>
+            Ключові слова
         </div>
-        <h3>Назва</h3>
 
+        <div>
+            Країна<br />
+            <input type="checkbox" name="contry" id="Moroko"> Мороко<br />
+            <input type="checkbox" name="contry" id="Brazil"> Бразилія<br />
+            <input type="checkbox" name="contry" id="Turkey"> Туреччина<br />
+            <input type="checkbox" name="contry" id="China"> Чина<br />
+            <input type="checkbox" name="contry" id="Ukraine"> Україна<br />
+        </div>
+
+        <div>
+            <p>Ціна @MinPrice₴ - @MaxPrice₴</p>
+            <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
+
+            <p></p>
+        </div>
+
+        <div>
+            Фасування
+            <input type="checkbox" name="packaging" id="packeged"> Фасований<br />
+            <input type="checkbox" name="packaging" id="gravimetric"> Грамовий
+        </div>
+
+        <div>
+
+        </div>
+
+        <div>
+            <p>Магазин</p>
+            <input type="checkbox" @bind="ShowATB" /> АТБ<br />
+            <input type="checkbox" @bind="ShowNovus" /> Новус
+        </div>
+
+        <div>
+        </div>
 
     </aside>
 
     <main class="content">
-        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"/>          <!-- тут визивається лист з продуктів в категорії -->
+        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
     </main>
 
 </div>
 @code {
-    [Parameter] public string ProductId { get; set; }
+    private bool ShowATB = true;
+    private bool ShowNovus = true;
     private int MinPrice = 0;
     private int MaxPrice = 100;
 
+    private List<string> GetSelectedShops()
+    {
+        var list = new List<string>();
+        if (ShowATB) list.Add("АТБ");
+        if (ShowNovus) list.Add("Новус");
+        return list;
+    }
+
+    private void OnRangeChangedPrice((int, int) range)
+    {
+        (MinPrice, MaxPrice) = range;
+    }
 }
