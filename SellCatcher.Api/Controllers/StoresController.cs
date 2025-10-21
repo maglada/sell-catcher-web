@@ -4,7 +4,7 @@ using SellCatcher.Api.Services;
 namespace SellCatcher.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] /*Эндпоинт магазинов*/
+    [Route("api/[controller]")]
     public class StoresController : ControllerBase
     {
         private readonly StoreService _storeService;
@@ -14,13 +14,13 @@ namespace SellCatcher.Api.Controllers
             _storeService = storeService;
         }
 
-        [HttpGet] /*Эндпоинт получения всех магазинов*/
+        [HttpGet]
         public IActionResult GetAll()
         {
             return Ok(_storeService.GetAll());
         }
 
-        [HttpGet("{id}")] /*Эндпоинт получения магазина по ID*/
+        [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
             var store = _storeService.GetById(id);
