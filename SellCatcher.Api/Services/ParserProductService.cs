@@ -57,8 +57,11 @@ namespace SellCatcher.Api.Services
                     }
                     else
                     {
+                        int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
+
                         category.Products.Add(new NOVUSProduct
                         {
+                            Id = nextId,
                             Name = product.Name,
                             Price = product.Price,
                             OldPrice = product.OldPrice,

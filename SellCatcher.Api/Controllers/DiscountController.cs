@@ -19,13 +19,17 @@ namespace SellCatcher.Api.Controllers
         [HttpGet]
         public IActionResult GetAll()
         {
-            return Ok(_discountService.GetAll());
+            var discounts = _discountService.GetAll();
+            if (discounts == null) return NotFound();
+            return Ok(discounts);
         }
 
         [HttpGet("store/{storeId}")]
         public IActionResult GetByStore(int storeId)
         {
-            return Ok(_discountService.GetByStore(storeId));
+            var discounts = _discountService.GetByStore(storeId);
+            if (discounts == null) return NotFound();
+            return Ok(discounts);
         }
 
         [HttpGet("{id}")]
@@ -37,8 +41,9 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpPost]
-        public IActionResult Add(Discount discount)
+        public IActionResult Add([FromBody] NOVUSProduct discount)
         {
+            if (discount == null) return NotFound();
             _discountService.Add(discount);
             return CreatedAtAction(nameof(GetById), new { id = discount.Id }, discount);
         }
