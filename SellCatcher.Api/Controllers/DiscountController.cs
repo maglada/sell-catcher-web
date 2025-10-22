@@ -40,7 +40,7 @@ namespace SellCatcher.Api.Controllers
             return Ok(discount);
         }
 
-        [HttpPost]
+        [HttpPost] /*Эндпоинт добавления новой скидки*/
         public IActionResult Add([FromBody] NOVUSProduct discount)
         {
             if (discount == null) return NotFound();
