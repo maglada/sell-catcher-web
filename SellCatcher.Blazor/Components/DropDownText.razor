@@ -1,20 +1,20 @@
 <div>
     <button @onclick="@ToggleDropDown">
-        @if(@isOpen == true) 
+        @if(@isOpen == true)   // If dropdown is open, show the product info block
         {
             <div>
-                @productInfo
+                @productInfo   // Text displayed when button is active
             </div>
         }
     </button>
 </div>
 
+@code {
+    bool isOpen = false;                          // Tracks whether the dropdown is open
+    string productInfo = "Информация про продукт"; // Sample text for display
 
-@code{
-    bool isOpen = false;
-    string productInfo = "Информация про продукт";
-    private void ToggleDropDown()
-        {
-            isOpen = !isOpen;
-        }
+    private void ToggleDropDown()                 // Called when button is clicked
+    {
+        isOpen = !isOpen;                         // Switch open/close state
+    }
 }

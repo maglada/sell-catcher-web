@@ -1,44 +1,82 @@
 <div class="price-range-container">
     <div class="slider-wrapper">
-        <div class="slider-track" style="@TrackStyle"></div>
-        <input type="range" min="@Min" max="@Max" value="@MinValue" @oninput="OnMinChanged">
-        <input type="range" min="@Min" max="@Max" value="@MaxValue" @oninput="OnMaxChanged">
+        <div class="slider-track"></div>
+        <div class="slider-active" style="@ActiveStyle"></div>
+
+        <input type="range" min="@Min" max="@Max" step="@Step" @bind-Value="MinValue" @bind-Value:event="oninput" />
+
+        <input type="range" min="@Min" max="@Max" step="@Step" @bind-Value="MaxValue" @bind-Value:event="oninput" />
     </div>
 </div>
-
 @code {
     [Parameter] public int Min { get; set; } = 0;
     [Parameter] public int Max { get; set; } = 100;
     [Parameter] public int Step { get; set; } = 1;
-
     [Parameter] public EventCallback<(int, int)> OnRangeChanged { get; set; }
 
-    private int MinValue = 0;
-    private int MaxValue = 100;
-    private string TrackStyle = "";
+    private int _minValue;
+    private int _maxValue;
+    private string ActiveStyle = "";
 
-    protected override void OnInitialized() => UpdateTrack();
-
-    private void OnMinChanged(ChangeEventArgs e)
+    public int MinValue
     {
-        MinValue = int.Parse(e.Value!.ToString()!);
-        if (MaxValue - MinValue < Step) MinValue = MaxValue - Step;
-        UpdateTrack();
+        get => _minValue;
+        set
+        {
+            // кламп до діапазону
+            var v = Math.Clamp(value, Min, Max - Step);
+            // не даємо заїхати на MaxValue
+            if (_maxValue - v < Step) v = _maxValue - Step;
+
+            if (v != _minValue)
+            {
+                _minValue = v;
+                UpdateActiveTrack();
+            }
+        }
     }
 
-    private void OnMaxChanged(ChangeEventArgs e)
+    public int MaxValue
     {
-        MaxValue = int.Parse(e.Value!.ToString()!);
-        if (MaxValue - MinValue < Step) MaxValue = MinValue + Step;
-        UpdateTrack();
+        get => _maxValue;
+        set
+        {
+            var v = Math.Clamp(value, Min + Step, Max);
+            if (v - _minValue < Step) v = _minValue + Step;
+
+            if (v != _maxValue)
+            {
+                _maxValue = v;
+                UpdateActiveTrack();
+            }
+        }
     }
 
-    private void UpdateTrack()
+    private void UpdateActiveTrack()
     {
-        double p1 = (double)(MinValue - Min) / (Max - Min) * 100;
-        double p2 = (double)(MaxValue - Min) / (Max - Min) * 100;
-        TrackStyle = $"background: linear-gradient(to right, #ddd {p1}%, #000 {p1}%, #000 {p2}%, #ddd {p2}%);";
+        var range = Math.Max(1, Max - Min);
+        double p1 = (double)(MinValue - Min) / range * 100.0;
+        double p2 = (double)(MaxValue - Min) / range * 100.0;
 
-        OnRangeChanged.InvokeAsync((MinValue, MaxValue)); // повідомляємо сторінку
+        double left = Math.Clamp(p1, 0, 100);
+        double width = Math.Clamp(p2 - p1, 0, 100);
+
+        // ✅ ось тут — заміна на варіант без ком
+        int leftPct = (int)Math.Round(left);
+        int widthPct = (int)Math.Round(width);
+        ActiveStyle = $"left:{leftPct}%; width:{widthPct}%;";
+
+        OnRangeChanged.InvokeAsync((MinValue, MaxValue));
     }
+
+
+    protected override void OnInitialized()
+    {
+        _minValue = Min;
+        _maxValue = Max;
+        if (_maxValue - _minValue < Step)
+            _maxValue = _minValue + Step; // гарантована різниця
+        UpdateActiveTrack();
+    }
+
 }

@@ -1,8 +1,10 @@
-@page "/"
+@page "/"   // Defines this component as the main (root) page of the Blazor app
 
 <!-- Hero -->
 <section class="hero">
     <h1>SELL CATCHER</h1>
+
+    <!-- Custom search component (probably reusable across pages) -->
     <div>
         <SearchBar/>
     </div>
@@ -11,22 +13,34 @@
 <!-- Categories -->
 <section class="categories">
     <div class="categories-row">
+        <!-- Each CategoryButton is a Blazor component showing a category card -->
         <CategoryButton Title="Картопля 1" Link="/categories/1" ImageUrl="images/potato.jpg" />
         <CategoryButton Title="Картопля 2" Link="/categories/2" ImageUrl="images/potato.jpg" />
         <CategoryButton Title="Картопля 3" Link="/categories/3" ImageUrl="images/potato.jpg" />
         <CategoryButton Title="Картопля 4" Link="/categories/4" ImageUrl="images/potato.jpg" />
-    </div >
-        <div style="text-align: center; padding: 3rem; ">
-        <a href="/categories" style="text-decoration: none; color: black;"> Більше категорій <img src="icons/arrow-right.svg"/> </a>      <!--<h2 style="padding: 2rem;"> Більше категорій </h2>-->
-        </div>
+    </div>
+
+    <!-- "Show more categories" link leading to /categories page -->
+    <div style="text-align: center; padding: 3rem;">
+        <a href="/categories" style="text-decoration: none; color: black;">
+            Більше категорій 
+            <img src="icons/arrow-right.svg"/>
+        </a>
+        <!-- previously replaced with <h2>, now simplified as a styled link -->
+    </div>
 </section>
 
-
 @code {
+    // Variable to store user input from the search bar
     string searchText = "";
+
+    // Triggered when user types in the search bar (if bound to OnInput)
     private void OnInput(ChangeEventArgs args)
     {
+        // Convert input value to string or set empty if null
         searchText = args.Value?.ToString() ?? "";
+
+        // Outputs the entered text to the browser console (for debugging)
         Console.WriteLine($"Пошук: {searchText}");
     }
 }

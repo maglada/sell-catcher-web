@@ -15,6 +15,15 @@
   padding: 10px 20px;
   height: 70px;
 }
+.site-header-second {
+  display: flex;
+  justify-content: space-between; /* Лого зліва, іконки справа */
+  align-items: center; /* Вирівняти по вертикалі */
+  background-color: #ffffff;
+  color: white;
+  padding: 10px 20px;
+  height: 70px;
+}
 
 .logo-block {
   display: flex;
@@ -39,7 +48,7 @@
   min-height: 300px;
 }
 .button-yellow {
-  width: 100px;
+  width: 125px;
   height: 35px;
   border-radius: 15px;
   background-color: rgb(233, 181, 10);

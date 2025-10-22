@@ -1,3 +1,11 @@
-.bucket-content{
-    display: flex;
+.bucket-button {
+  width: 125px;
+  height: 35px;
+  border-radius: 15px;
+  background-color: rgb(233, 181, 10);
+  border-style: hidden;
+}
+
+.bucket-content {
+  display: absolute;
 }
