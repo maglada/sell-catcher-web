@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-using SellCatcher.Api.Models;
 
-=======
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,13 +7,12 @@ using System.Threading.Tasks;
 using LiteDB;
 using SellCatcher.Api.Models;
 
-
->>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9
 namespace SellCatcher.Api.Services
 {
     public class DiscountService
     {
-<<<<<<< HEAD
+        private readonly string _dbPath;
+
         private readonly List<Discount> _discounts = new()
         {
             new Discount { Id = 1, StoreId = 1, Product = "Stella Artois 0.5л", OldPrice = 35, NewPrice = 29.5m, ValidUntil = DateTime.UtcNow.AddDays(7) },
@@ -35,33 +31,71 @@ namespace SellCatcher.Api.Services
         {
             discount.Id = _discounts.Max(d => d.Id) + 1;
             _discounts.Add(discount);
-=======
-        private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
 
-        public void Add(Discount discount)
+
+        public DiscountService()
         {
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Discount>("discounts");
-            col.Insert(discount);
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+
+            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
         }
 
-        public List<Discount> GetAll()
+        public List<NOVUSProduct> GetAll()
         {
             using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").FindAll().ToList();
+            var stores = db.GetCollection<Store>("stores").FindAll();
+
+            var allProducts = stores.SelectMany(s => s.Categories).SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
+
+            return allProducts;
         }
 
-        public List<Discount> GetByStore(int storeId)
+        public List<NOVUSProduct> GetByStore(int storeId)
         {
             using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").Find(d => d.StoreId == storeId).ToList();
+            var store = db.GetCollection<Store>("stores").FindById(storeId);
+            if (store == null) return new List<NOVUSProduct>();
+
+            return store.Categories.SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
         }
 
-        public Discount GetById(int id)
+        public NOVUSProduct? GetById(int id)
         {
             using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").FindById(id);
->>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9
+            var stores = db.GetCollection<Store>("stores");
+
+            foreach (var store in stores.FindAll())
+            {
+                foreach (var category in store.Categories)
+                {
+                    var product = category.Products.FirstOrDefault(p => p.Id == id);
+
+                    if (product != null && (product.IsOnSale || !string.IsNullOrEmpty(product.Discount)))
+                        return product;
+                }
+            }
+            return null;
+        }
+
+        public void Add(NOVUSProduct discount)
+        {
+            using var db = new LiteDatabase(_dbPath);
+            var stores = db.GetCollection<Store>("stores");
+
+            var store = stores.FindOne(x => x.Name == "NOVUS") ?? new Store { Name = "NOVUS" };
+            var category = store.Categories.FirstOrDefault() ?? new Category { Name = "General" };
+
+            int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
+
+            discount.Id = nextId;
+            category.Products.Add(discount);
+
+            if (!store.Categories.Any())
+                store.Categories.Add(category);
+
+            stores.Update(store);
         }
     }
 }
