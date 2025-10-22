@@ -9,17 +9,7 @@ namespace SellCatcher.Api.Models
 {
     public class AccountRepository
     {
-        private readonly string _dbPath;
-
-        public AccountRepository()
-        {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
-
-            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
-        }
-
+        private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
 
         public void Add(Account account)
         {
