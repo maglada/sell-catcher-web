@@ -19,7 +19,7 @@ var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 builder.Services.AddOpenApi();
 
 
-
+builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<AuthSettings>();
@@ -47,7 +47,7 @@ app.Run();
 /// </summary>
 //using static SellCatcher.Api.Services.ParserProductService;
 
-//class Test 
+//class Test
 //{
 //    static async Task Main()
 //    {
