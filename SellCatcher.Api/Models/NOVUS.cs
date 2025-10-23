@@ -11,8 +11,8 @@ namespace SellCatcher.Api.Models
     {
         [BsonId]
         public int Id { get; set; }
-        public string Name { get; set; } = "";  
-        public decimal Price { get; set; }  
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
         public decimal? OldPrice { get; set; }
         public bool IsOnSale { get; set; } = false;
         public string Discount { get; set; } = "";
@@ -21,3 +21,5 @@ namespace SellCatcher.Api.Models
         public DateTime WhenUpdated { get; set; } = DateTime.Now; // this is to know when the price has changed
     }
 }
+// Models/NOVUS.csvodmfvoidmkjbvndfuibndfiubhdfbldnfbiuydfbdfibndfiobdnf
+//vsivoisdnvsdmvsidvskdjvnsdvnsiuvbsd
