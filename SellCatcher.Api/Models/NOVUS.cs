@@ -10,7 +10,7 @@ namespace SellCatcher.Api.Models
     public class NOVUSProduct
     {
         [BsonId]
-        public int Id { get; set; }
+        public int Id { get; set; } // It`s ID
         public string Name { get; set; } = "";  
         public decimal Price { get; set; }  
         public decimal? OldPrice { get; set; }
@@ -21,3 +21,4 @@ namespace SellCatcher.Api.Models
         public DateTime WhenUpdated { get; set; } = DateTime.Now; // this is to know when the price has changed
     }
 }
+
