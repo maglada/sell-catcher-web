@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-using SellCatcher.Api.Models;
-
-=======
+/*
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,14 +6,11 @@ using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
 using SellCatcher.Api.Models;
-
-
->>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9
+    
 namespace SellCatcher.Api.Services
 {
     public class DiscountService
     {
-<<<<<<< HEAD
         private readonly List<Discount> _discounts = new()
         {
             new Discount { Id = 1, StoreId = 1, Product = "Stella Artois 0.5л", OldPrice = 35, NewPrice = 29.5m, ValidUntil = DateTime.UtcNow.AddDays(7) },
@@ -35,33 +29,6 @@ namespace SellCatcher.Api.Services
         {
             discount.Id = _discounts.Max(d => d.Id) + 1;
             _discounts.Add(discount);
-=======
-        private readonly string _dbPath = @"C:\Users\Admin\Documents\sell-catcher-web\SellCatcher.Api\sellcatcher.db";
-
-        public void Add(Discount discount)
-        {
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Discount>("discounts");
-            col.Insert(discount);
-        }
-
-        public List<Discount> GetAll()
-        {
-            using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").FindAll().ToList();
-        }
-
-        public List<Discount> GetByStore(int storeId)
-        {
-            using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").Find(d => d.StoreId == storeId).ToList();
-        }
-
-        public Discount GetById(int id)
-        {
-            using var db = new LiteDatabase(_dbPath);
-            return db.GetCollection<Discount>("discounts").FindById(id);
->>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9
         }
     }
 }

@@ -64,12 +64,8 @@ namespace SellCatcher.Api.Controllers
             var topDeals = _discountService
                 .GetAll()
                 .OrderByDescending(d => d.OldPrice - d.NewPrice)
-                .Take(3); 
+                .Take(3);
             return Ok(topDeals);
         }
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 33463db23ef59ab331b3163b9bba868a49172fc9
