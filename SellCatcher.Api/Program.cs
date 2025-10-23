@@ -19,13 +19,13 @@ var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 builder.Services.AddOpenApi();
 
 
-
+builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<AuthSettings>();
 builder.Services.AddScoped<JWTService>();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
-builder.Services.AddAuth(builder.Configuration);
+builder.Services.AddAuth();
 builder.Services.AddScoped<AccountService>();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
@@ -47,7 +47,7 @@ app.Run();
 /// </summary>
 //using static SellCatcher.Api.Services.ParserProductService;
 
-//class Test 
+//class Test
 //{
 //    static async Task Main()
 //    {

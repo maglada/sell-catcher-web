@@ -19,13 +19,17 @@ namespace SellCatcher.Api.Controllers
         [HttpGet] /*Эндпоинт получения всех скидок*/
         public IActionResult GetAll()
         {
-            return Ok(_discountService.GetAll());
+            var discounts = _discountService.GetAll();
+            if (discounts == null) return NotFound();
+            return Ok(discounts);
         }
 
         [HttpGet("store/{storeId}")] /*Эндпоинт получения скидок по магазину*/
         public IActionResult GetByStore(int storeId)
         {
-            return Ok(_discountService.GetByStore(storeId));
+            var discounts = _discountService.GetByStore(storeId);
+            if (discounts == null) return NotFound();
+            return Ok(discounts);
         }
 
         [HttpGet("{id}")] /*Эндпоинт получения скидки по ID*/
@@ -37,8 +41,9 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpPost] /*Эндпоинт добавления новой скидки*/
-        public IActionResult Add(Discount discount)
+        public IActionResult Add([FromBody] NOVUSProduct discount)
         {
+            if (discount == null) return NotFound();
             _discountService.Add(discount);
             return CreatedAtAction(nameof(GetById), new { id = discount.Id }, discount);
         }
@@ -58,14 +63,14 @@ namespace SellCatcher.Api.Controllers
                 .Where(d => d.ValidUntil >= DateTime.UtcNow);
             return Ok(discounts);
         }
-        [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
-        public IActionResult GetTopDeals()
-        {
-            var topDeals = _discountService
-                .GetAll()
-                .OrderByDescending(d => d.OldPrice - d.NewPrice)
-                .Take(3);
-            return Ok(topDeals);
-        }
+        //[HttpGet("top")] /*Эндпоинт получения лучших скидок*/
+        //public IActionResult GetTopDeals()
+        //{
+        //    var topDeals = _discountService
+        //        .GetAll()
+        //        .OrderByDescending(d => d.OldPrice - d.NewPrice)
+        //        .Take(3);
+        //    return Ok(topDeals);
+        //}
     }
 }
