@@ -21,5 +21,3 @@ namespace SellCatcher.Api.Models
         public DateTime WhenUpdated { get; set; } = DateTime.Now; // this is to know when the price has changed
     }
 }
-// Models/NOVUS.csvodmfvoidmkjbvndfuibndfiubhdfbldnfbiuydfbdfibndfiobdnf
-//vsivoisdnvsdmvsidvskdjvnsdvnsiuvbsd
