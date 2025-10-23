@@ -63,14 +63,14 @@ namespace SellCatcher.Api.Controllers
                 .Where(d => d.ValidUntil >= DateTime.UtcNow);
             return Ok(discounts);
         }
-        [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
-        public IActionResult GetTopDeals()
-        {
-            var topDeals = _discountService
-                .GetAll()
-                .OrderByDescending(d => d.OldPrice - d.NewPrice)
-                .Take(3); 
-            return Ok(topDeals);
-        }
+        //[HttpGet("top")] /*Эндпоинт получения лучших скидок*/
+        //public IActionResult GetTopDeals()
+        //{
+        //    var topDeals = _discountService
+        //        .GetAll()
+        //        .OrderByDescending(d => d.OldPrice - d.NewPrice)
+        //        .Take(3);
+        //    return Ok(topDeals);
+        //}
     }
 }
