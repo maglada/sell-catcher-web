@@ -22,13 +22,23 @@ namespace ProductScraper
             // The string parameter is the category name that will be assigned to products
             _scraperMap = new Dictionary<string, Func<ScraperConfig, string, IProductScraper>>(StringComparer.OrdinalIgnoreCase)
             {
-                { "NovusLinks_fish", (cfg, cat) => new NovusProductScraper(cfg, cat) },
-                { "NovusLinks_alcohol", (cfg, cat) => new NovusProductScraperAlc(cfg, cat) },
-                { "NovusLinks_eggs", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_meat", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_bakery", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_halfmade", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_veg_fruit", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_fish", (cfg, cat) => new NovusProductScraper(cfg, cat) },
+                //{ "NovusLinks_alcohol", (cfg, cat) => new NovusProductScraperAlc(cfg, cat) },
+                //{ "NovusLinks_eggs", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_meat", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_bakery", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_halfmade", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_veg_fruit", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+
+                // Silpo: generic entry — file names like "SilpoLinks.txt" or "SilpoLinks_veg.txt"
+                //{ "SilpoLinks_veg_fruit", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_cig", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                { "SilpoLinks_egg", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                { "SilpoLinks_fish", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                { "SilpoLinks_bread", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                { "SilpoLinks_meat", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                { "SilpoLinks_halfmade", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+
                 // Add more mappings here as needed for each category
             };
         }
@@ -70,9 +80,14 @@ namespace ProductScraper
         /// </summary>
         private string DetermineCategoryName(string baseName)
         {
-            // Remove "NovusLinks_" prefix and convert to proper category name
-            var categoryPart = baseName.Replace("NovusLinks_", "", StringComparison.OrdinalIgnoreCase);
-            
+            // Remove known prefixes (NovusLinks_ or AtbLinks_) and convert to proper category name
+            var categoryPart = baseName
+                .Replace("NovusLinks_", "", StringComparison.OrdinalIgnoreCase)
+                .Replace("AtbLinks_", "", StringComparison.OrdinalIgnoreCase)
+                .Replace("NovusLinks", "", StringComparison.OrdinalIgnoreCase)
+                .Replace("AtbLinks", "", StringComparison.OrdinalIgnoreCase)
+                .Trim();
+
             // Map file name parts to friendly category names
             var categoryMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -82,7 +97,12 @@ namespace ProductScraper
                 { "meat", "Meat & Poultry" },
                 { "bakery", "Bakery" },
                 { "halfmade", "Semi-Finished Products" },
-                { "veg_fruit", "Fruits & Vegetables" }
+                { "veg_fruit", "Fruits & Vegetables" },
+
+                // example ATB-friendly names (extend as needed)
+                { "groceries", "Groceries" },
+                { "produce", "Produce" },
+                { "dairy", "Dairy" }
             };
 
             return categoryMap.TryGetValue(categoryPart, out var friendlyName) 
