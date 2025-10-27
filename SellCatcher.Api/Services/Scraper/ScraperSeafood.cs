@@ -120,24 +120,29 @@ namespace ProductScraper
                 return products;
             }
 
+            /// Review all found items
             foreach (var product in productElements)
             {
                 try
                 {
+                    /// Extract product name
                     var nameSel = await product.QuerySelectorAsync("[data-testid='product_tile_title']");
                     var name = nameSel != null ? (await nameSel.InnerTextAsync())?.Trim() : "";
 
+                    /// Extract product price
                     var priceSel = await product.QuerySelectorAsync("[data-marker='Discounted Price'] span.Price__value_body") ??
                                   await product.QuerySelectorAsync(".Price__value_caption") ??
                                   await product.QuerySelectorAsync(".Price__value_unavailable") ??
                                   await product.QuerySelectorAsync(".Price__value_discount");
                     var newPrice = priceSel != null ? (await priceSel.InnerTextAsync())?.Trim() : "";
 
+                    /// Extract product old price
                     var oldPriceSel = await product.QuerySelectorAsync("[data-marker='Old Price'] span.Price__value_body") ??
                                      await product.QuerySelectorAsync(".ProductTile_oldPrice span") ??
                                      await product.QuerySelectorAsync(".Price__value_old");
                     var nonDiscountPrice = oldPriceSel != null ? (await oldPriceSel.InnerTextAsync())?.Trim() : "";
 
+                    /// Looking for text with discount
                     var discountSel = await product.QuerySelectorAsync("[data-marker='Discount']") ??
                                      await product.QuerySelectorAsync(".DiscountBadge") ??
                                      await product.QuerySelectorAsync("[class*='discount']") ??
@@ -145,6 +150,7 @@ namespace ProductScraper
 
                     string discount = "";
 
+                    /// Clean up
                     if (discountSel != null)
                     {
                         var discountText = (await discountSel.InnerTextAsync())?.Trim() ?? "";
@@ -153,6 +159,7 @@ namespace ProductScraper
                             discount = match.Value.Trim();
                     }
 
+                    /// Extract duration of discounts
                     string validUntil = "";
 
                     var validUntilSel = await product.QuerySelectorAsync("[data-marker='Promotion_until_date']");
@@ -166,11 +173,13 @@ namespace ProductScraper
                         nonDiscountPrice = "";
                     }
 
+                    /// Clean prices from symbols
                     string CleanPrice(string p) => p.Replace(" ", "").Replace(",", ".").Replace("₴", "").Trim();
 
                     var cleanedNewPrice = CleanPrice(newPrice);
                     var cleanedOldPrice = CleanPrice(nonDiscountPrice);
 
+                    /// Convert rows to decimal
                     if (!decimal.TryParse(cleanedNewPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
                     {
                         continue;
@@ -180,6 +189,7 @@ namespace ProductScraper
                     if (decimal.TryParse(cleanedOldPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal priceOld))
                         oldPrice = priceOld;
 
+                    /// Create a model object
                     var p = new Product
                     {
                         Name = name,
