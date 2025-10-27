@@ -6,49 +6,75 @@ using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
 
 
-DotNetEnv.Env.Load(".env");
+// DotNetEnv.Env.Load(".env");
 
 
-var builder = WebApplication.CreateBuilder(args);
+// var builder = WebApplication.CreateBuilder(args);
 
 
-var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
-var jwtLifetime = Environment.GetEnvironmentVariable("JWT_TOKEN_LIFETIME");
-var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
+// var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+// var jwtLifetime = Environment.GetEnvironmentVariable("JWT_TOKEN_LIFETIME");
+// var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 
-builder.Services.AddOpenApi();
-
-
-builder.Services.AddScoped<DiscountService>();
-builder.Services.AddScoped<AccountRepository>();
-builder.Services.AddControllers();
-builder.Services.AddScoped<AuthSettings>();
-builder.Services.AddScoped<JWTService>();
-builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
-builder.Services.AddAuth();
-builder.Services.AddScoped<AccountService>();
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-var app = builder.Build();
+// builder.Services.AddOpenApi();
 
 
+// builder.Services.AddScoped<DiscountService>();
+// builder.Services.AddScoped<AccountRepository>();
+// builder.Services.AddControllers();
+// builder.Services.AddScoped<AuthSettings>();
+// builder.Services.AddScoped<JWTService>();
+// builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
+// builder.Services.AddAuth();
+// builder.Services.AddScoped<AccountService>();
+// builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseRouting();
-app.MapControllers();
-
-app.Run();
+// var app = builder.Build();
 
 
+
+// app.UseHttpsRedirection();
+// app.UseAuthentication();
+// app.UseAuthorization();
+// app.UseRouting();
+// app.MapControllers();
+
+// app.Run();
+
+class Test {
+    static void Main(string [] args)
+    {
+        Console.WriteLine("Accounts");
+        var accountRepo = new AccountRepository();
+        var account = new Account
+        {
+            UserName = "Jlexa",
+            FirstName = "CBAPKA",
+            LastName = "LEXA",
+            PasswordHash = "hashedpassword"
+        };
+        var account2 = new Account
+        {
+            UserName = "Jleasdasd",
+            FirstName = "CBAPKAasdasda",
+            LastName = "LEXAasdasdasdas",
+            PasswordHash = "hashedpasswordasdasdasd"
+        };
+
+        accountRepo.Add(account);
+         accountRepo.Add(account2);
+        var Allaccounts = accountRepo.GetAll().ToList();
+          
+    }
+    
+}
 /// <summary>
 /// --------------Run Parser----------------
 /// </summary>
-//using static SellCatcher.Api.Services.ParserProductService;
+// using static SellCatcher.Api.Services.ParserProductService;
 
-//class Test
-//{
+// class Test
+// {
 //    static async Task Main()
 //    {
 //        await TestParserRun();
@@ -112,6 +138,4 @@ app.Run();
 
 //        Console.ReadKey();
 //    }
-//}
-
-
+// }
