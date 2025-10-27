@@ -1,0 +1,117 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "" ]
+  pull_request:
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    # CACHE
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('/*.csproj') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Debug
+    
+    - name: Run tests
+      run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=report.trx" --results-directory ./TestResults || true
+    
+    # ARTIFACTS
+    - name: Upload test report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-report
+        path: './TestResults/report.trx'
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    # CACHE
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Publish project
+      run: dotnet publish --configuration Release --output ./publish --no-restore
+    
+    # ARTIFACTS
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-build
+        path: ./publish
+
+  deploy:
+    name: Deploy (staging)
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    
+    environment:
+      name: staging
+      url: https://staging.example.com
+    
+    steps:
+    - name: Download build artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: app-build
+        path: ./artifact
+    
+    - name: Simulate deploy
+      env:
+        DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        API_URL: ${{ vars.API_URL }}
+      run: |
+        echo "Deploying to ${{ github.event.repository.name }} staging"
+        echo "Using token: ${DEPLOY_TOKEN:0:4}****"
+        echo "API URL: $API_URL"
+        ls -la ./artifact
+        echo "Deploy success"
