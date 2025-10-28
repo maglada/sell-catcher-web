@@ -1,5 +1,26 @@
-<div class="bucket-content">
+<div>
 
-
+    <button class="bucket-button" @onclick="@bucketZoneOn"><img src="icons/shopping-cart.svg" />Корзина</button>
 
 </div>
+<div>
+    @if (OpenBucket)
+    {
+        <div>
+
+
+
+
+
+
+        </div>
+    }
+</div>
+
+@code {
+    bool OpenBucket = false;
+    void bucketZoneOn()
+    {
+        OpenBucket = !OpenBucket;
+    }
+}

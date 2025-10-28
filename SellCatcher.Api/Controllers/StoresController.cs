@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SellCatcher.Api.Services;
+using SellCatcher.Api.Models;
 
 namespace SellCatcher.Api.Controllers
 {
