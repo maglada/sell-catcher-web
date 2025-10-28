@@ -13,6 +13,7 @@ namespace SellCatcher.Api.Services
     {
         public class ProductService
         {
+            /// Where is the database
             private readonly string _dbPath;
             public ProductService()
             {
@@ -23,11 +24,18 @@ namespace SellCatcher.Api.Services
                 _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
             }
 
+            /// <summary>
+            /// Saves or updates the list of goods in the LiteDB database for the specified store
+            /// </summary>
+            /// <param name="parserProducts">List of parsing goods</param>
+            /// <param name="storeName">Store name, which get products</param>
+            /// <returns>Amount of goods</returns>
             public int SaveProducts(List<Product> parserProducts, string storeName = "NOVUS")
             {
                 using var db = new LiteDatabase(_dbPath);
                 var stores = db.GetCollection<Store>("stores");
 
+                /// Check if there is a shop with the right name, if not create a new one
                 var store = stores.FindOne(x => x.Name == storeName);
                 if (store == null)
                 {
@@ -35,9 +43,12 @@ namespace SellCatcher.Api.Services
                     stores.Insert(store);
                 }
 
+                /// Go through every product. If the category is not specified then non-category
                 foreach (var product in parserProducts)
                 {
                     var categoryName = product.Category ?? "non-category";
+
+                    /// Check if there is such a category in the store.
                     var category = store.Categories.FirstOrDefault(c => c.Name == categoryName);
                     if (category == null)
                     {
@@ -45,6 +56,7 @@ namespace SellCatcher.Api.Services
                         store.Categories.Add(category);
                     }
 
+                    /// If the product is already in the category (by name), update all fields
                     var alreadyExist = category.Products.FirstOrDefault(p => p.Name == product.Name);
                     if (alreadyExist != null)
                     {
@@ -59,6 +71,7 @@ namespace SellCatcher.Api.Services
                     {
                         int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
 
+                        /// Good creation
                         category.Products.Add(new NOVUSProduct
                         {
                             Id = nextId,
@@ -125,6 +138,7 @@ namespace SellCatcher.Api.Services
                 return allProducts.Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
             }
 
+            /// Creating a date
             private DateTime? ParseDate(string dateStr)
             {
                 if (string.IsNullOrEmpty(dateStr))
