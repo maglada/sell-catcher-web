@@ -1,25 +1,24 @@
-@page "/profile"
+@page "/profile" // Defines the route for this page
 
 <div class="profile">
-<h2>Мої дані</h2>
-        <img src="/images/avatar.png" alt="Avatar" class="avatar" />
+    <h2>Мої дані</h2>
+    <img src="/images/avatar.png" alt="Avatar" class="avatar" />
+
     <div class="info-container">
-        
 
         <div class="info-box">
             <p prof-text>Персональна інформація
-            <button @onclick="ToggleEdit" class="redact-button"><img src="@iconSrc" /></button><br />
+                <button @onclick="ToggleEdit" class="redact-button"><img src="@iconSrc" /></button><br />
             </p>
             <hr class="divider" />
 
-            
             <div>
                 <p prof-text>П.І.Б:</p>
-                @if (isEditing)
+                @if (isEditing) // If editing mode is ON, show input
                 {
                     <input @bind="User.FullName" />
                 }
-                else
+                else // Otherwise, show plain text
                 {
                     <span>@User.FullName</span>
                 }
@@ -30,10 +29,12 @@
                 @if (isEditing)
                 {
                     <input type="date" @bind="User.BirthDate" />
+                    // Date picker input
                 }
                 else
                 {
                     <span>@User.BirthDate.ToShortDateString()</span>
+                    // Display short date format
                 }
             </div><br />
 
@@ -45,7 +46,6 @@
                         <option value="Чоловік">Чоловік</option>
                         <option value="Жінка">Жінка</option>
                         <option value="Інше">Інше</option>
-
                     </select>
                 }
                 else
@@ -64,23 +64,28 @@
                 @if (isEditing)
                 {
                     <input @bind="User.Email" />
+                    // Editable field in edit mode
                 }
                 else
                 {
                     <span>@User.Email</span>
+                    // Static text otherwise
                 }
             </div><br />
+
             <div>
                 <p prof-text>Пароль: </p>
                 @if (isEditing)
                 {
                     <input @bind="User.Password" />
+                    // Not masked yet, just raw text input
                 }
                 else
                 {
                     <span>@User.Password</span>
                 }
             </div><br />
+
             <div>
                 <p prof-text>Мобільний телефон: </p>
                 @if (isEditing)
@@ -95,12 +100,13 @@
         </div>
     </div>
 </div>
+
 @code {
-    private bool isEditing = false;
-    private string buttonText = "Змінити";
-    private string iconSrc = "icons/pencil.svg";
- 
-    private UserInfo User = new UserInfo
+    private bool isEditing = false; // Tracks edit mode
+    private string buttonText = "Змінити"; // Not used yet, could show button label
+    private string iconSrc = "icons/pencil.svg"; // Changes icon when toggling edit mode
+
+    private UserInfo User = new UserInfo // Default user data
     {
         FullName = "Прізвище Ім'я По-батькові",
         BirthDate = DateTime.Now,
@@ -110,20 +116,20 @@
         Password = "12345678a"
     };
 
-    private void ToggleEdit()
+    private void ToggleEdit() // Called when edit button is clicked
     {
-        isEditing = !isEditing;
-        buttonText = isEditing ? "Зберегти" : "Змінити";
-        iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg";
-
+        isEditing = !isEditing; // Switch between view/edit mode
+        buttonText = isEditing ? "Зберегти" : "Змінити"; // Update button label
+        iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg"; // Change icon
     }
 
+    // Class representing user profile data
     public class UserInfo
     {
         public string FullName { get; set; }
         public DateTime BirthDate { get; set; }
         public string Gender { get; set; }
-        public string Password {get; set; }
+        public string Password { get; set; }
         public string Email { get; set; }
         public string Phone { get; set; }
     }

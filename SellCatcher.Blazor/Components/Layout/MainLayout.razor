@@ -1,15 +1,12 @@
 ﻿@inherits LayoutComponentBase
-
+@inject NavigationManager Navigation
+<!-- layouts always are in site, it can be everywere you want -->
 <div class="page">
 
     <!-- Спільний Header -->
     <header class="site-header">
         <div class="logo-block">
             <div><a href="/">Лого</a></div>
-            <SimpleDropDownButton DropDownContent="Category|/categories, Home Page|/">
-                <img src="icons/layout-grid.svg" />
-                Каталог
-            </SimpleDropDownButton>
         </div>
         <a href='/profile'>
             <button class="button-yellow"><img src="icons/user.svg" />Profile</button>
@@ -19,14 +16,29 @@
          сторінку через що з'являється загрузка, 
          коли в той же час, варіант з <a> відразу переходе на посилання,
          в результаті чого працює без загрузки-->
-        <!--<button class="button-yellow" @onclick="@bucketOn"><img src="icons/shopping-cart.svg"/>Кошик</button>
-        @if (boolbucketOn == true)
-        {
-                    Bucket />
-                }
+        <!--<button class="button-yellow" @onclick="@bucketOn"><img src="icons/shopping-cart.svg"/>Кошик</button>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     }
 -->
     </header>
+    @if (!IsHomePage)
+    {
+        <header class="site-header-second">
+            <div class="logo-block">
+                <SimpleDropDownButton DropDownContent="Category|/categories, Home Page|/">
+                    <img src="icons/layout-grid.svg" />
+                    Каталог
+                </SimpleDropDownButton>
 
+            </div>
+
+            <div>
+                <SearchBar></SearchBar>
+            </div>
+
+            <div>
+                <Bucket />
+            </div>
+        </header>
+    }
     <!-- Тіло -->
     <main class="site-content">
         @Body
@@ -50,8 +62,8 @@
 }
 
 @code {
+
     private bool IsRegistered = false;
-    bool boolbucketOn = false;
 
     private void HideModal()
     {
@@ -59,9 +71,7 @@
         StateHasChanged();
     }
 
-    private void bucketOn()
-    {
-        boolbucketOn = !boolbucketOn;
-
-    }
+    private bool IsHomePage => string.IsNullOrEmpty(
+    Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/')
+    );
 }
