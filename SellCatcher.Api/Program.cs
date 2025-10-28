@@ -45,10 +45,10 @@ app.Run();
 /// <summary>
 /// --------------Run Parser----------------
 /// </summary>
-//using static SellCatcher.Api.Services.ParserProductService;
+// using static SellCatcher.Api.Services.ParserProductService;
 
-//class Test
-//{
+// class Test
+// {
 //    static async Task Main()
 //    {
 //        await TestParserRun();
@@ -112,6 +112,4 @@ app.Run();
 
 //        Console.ReadKey();
 //    }
-//}
-
-
+// }
