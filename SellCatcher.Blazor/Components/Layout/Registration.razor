@@ -1,90 +1,333 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text.Json
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
 <div class="modal-overlay" @onclick="OnBackdropClick">
     <div class="@Class" @onclick:stopPropagation>
-           <div class="actions">
-                <input type="radio" name="auth" id="SignIn" checked @onclick="SignTypeIn">
-                <label for="SignIn" class="button">Вхід</label>
+        <div class="actions">
+            <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
+            <label for="SignIn" class="button">Sign In</label>
 
-                <input type="radio" name="auth" id="SignUp" checked @onclick="SignTypeUp">
-                <label for="SignUp" class="button">Реєстрація</label>
-            </div>
+            <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
+            <label for="SignUp" class="button">Sign Up</label>
+        </div>
 
-        @if(Enter)
+        @if (Enter)
         {
-            <form>
+            <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
                 <div style="margin-top:10px;">
-                    <label>Мобільний телефон</label><br />
-                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@LoginPhone">
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" />
+                    <ValidationMessage For="@(() => loginModel.Phone)" />
                 </div>
+
                 <div style="margin-top:10px;">
-                    <label>Пароль</label><br />
-                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind = "@LoginPassword"/>
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
                 </div>
-                
-            </form>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @if (isBusy)
+                        {
+                            <span>Signing in...</span>
+                        }
+                        else
+                        {
+
+                            <span>Sign In</span>
+                        }
+                    </button>
+                    <button type="button" class="button-secondary" disabled="@isBusy" @onclick="Close">Cancel</button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text">@error</p>
+                }
+            </EditForm>
         }
-        else{
-            <form>
+        else
+        {
+            <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
                 <div style="margin-top:10px;">
-                    <label>Ім’я</label><br />
-                    <input type="text" placeholder="Введіть ім’я чи нікнейм" class="inputInfo" @bind="@RegisterName"/>
+                    <label>Name</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Name" />
+                    <ValidationMessage For="@(() => registerModel.Name)" />
                 </div>
 
                 <div style="margin-top:10px;">
                     <label>Email</label><br />
-                    <input type="email" placeholder="Введіть email" class="inputInfo" @bind="@RegisterEmail"/>
-                </div>
-                <div style="margin-top:10px;">
-                    <label>Мобільний телефон</label><br />
-                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@RegisterPhone"/>
+                    <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
+                    <ValidationMessage For="@(() => registerModel.Email)" />
                 </div>
 
                 <div style="margin-top:10px;">
-                    <label>Пароль</label><br />
-                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind="@RegisterPassword"/>
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" />
+                    <ValidationMessage For="@(() => registerModel.Phone)" />
                 </div>
 
-                
-            </form>
+                <div style="margin-top:10px;">
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
+                    <ValidationMessage For="@(() => registerModel.Password)" />
+                </div>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @if (isBusy)
+                        {
+                            <span>Registering...</span>
+                        }
+                        else
+                        {
+
+                            <span>Register</span>
+                        }
+                    </button>
+                    <button type="button" class="button-secondary" disabled="@isBusy" @onclick="Close">Cancel</button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text">@error</p>
+                }
+            </EditForm>
         }
-        <div class="actions">
-                    <button type="button" @onclick="Close" class="bottonEnter">Увійти</button>
-        </div>
     </div>
 </div>
 
 @code {
+    // Set to false when backend is ready.
+    private const bool UseFakeApi = true;
 
-    // Змінні для входу
-    string LoginPhone { get; set; } = "";
-    string LoginPassword { get; set; } = "";
-
-    // Змінні для реєстрації
-    string RegisterName { get; set; } = "";
-    string RegisterEmail { get; set; } = "";
-    string RegisterPhone { get; set; } = "";
-    string RegisterPassword { get; set; } = "";
-
+    // UI state
     string Class = "modal";
     bool Enter = true;
-    [Parameter]
-    public EventCallback OnClose { get; set; }   // викликається при закритті
+    bool isBusy = false;
+    string? error;
+
+    // Callbacks
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<AuthResult> OnSuccess { get; set; }
+
+    // Form models
+    LoginRequest loginModel = new();
+    RegisterRequest registerModel = new();
+
+    // In-memory "database" for fake mode (phone -> password)
+    private static readonly Dictionary<string, (string Password, UserInfo User)> FakeUsers =
+    new()
+    {
+{ "+380000000000", ("Secret123", new UserInfo { Id="u1", Name="Demo User", Email="demo@example.com",
+Phone="+380000000000", Role="User" }) }
+    };
+
     private void SignTypeIn()
     {
+        error = null;
         Class = "modal";
         Enter = true;
     }
+
     private void SignTypeUp()
     {
-        Class="modal-reg";
+        error = null;
+        Class = "modal-reg";
         Enter = false;
     }
-    private void Close()
+
+    private async Task SubmitLogin()
     {
-        OnClose.InvokeAsync(); // виклик події з Layout-а
+        error = null;
+        isBusy = true;
+        try
+        {
+            if (UseFakeApi)
+            {
+                await Task.Delay(400); // simulate latency
+                if (FakeUsers.TryGetValue(loginModel.Phone, out var entry) && entry.Password == loginModel.Password)
+                {
+                    var ok = new AuthResult { Token = "fake-jwt-token", User = entry.User };
+                    await PersistAuthAsync(ok);
+                    await OnSuccess.InvokeAsync(ok);
+                    await OnClose.InvokeAsync();
+                }
+                else
+                {
+                    error = "Invalid phone or password (fake mode).";
+                }
+                return;
+            }
+
+            using var resp = await Http.PostAsJsonAsync("/api/auth/login", loginModel);
+            if (!resp.IsSuccessStatusCode)
+            {
+                error = await ReadErrorAsync(resp);
+                return;
+            }
+
+            var okReal = await resp.Content.ReadFromJsonAsync<AuthResult>();
+            if (okReal is null || string.IsNullOrWhiteSpace(okReal.Token))
+            {
+                error = "Invalid server response.";
+                return;
+            }
+
+            await PersistAuthAsync(okReal);
+            await OnSuccess.InvokeAsync(okReal);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Network error: " + ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
-    private void OnBackdropClick()
+    private async Task SubmitRegister()
     {
-        OnClose.InvokeAsync(); // якщо клік поза вікном — закрити
+        error = null;
+        isBusy = true;
+        try
+        {
+            if (UseFakeApi)
+            {
+                await Task.Delay(400); // simulate latency
+
+                if (FakeUsers.ContainsKey(registerModel.Phone))
+                {
+                    error = "User with this phone already exists (fake mode).";
+                    return;
+                }
+
+                var user = new UserInfo
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Name = registerModel.Name,
+                    Email = registerModel.Email,
+                    Phone = registerModel.Phone,
+                    Role = "User"
+                };
+
+                FakeUsers[registerModel.Phone] = (registerModel.Password, user);
+
+                var ok = new AuthResult { Token = "fake-jwt-token", User = user };
+                await PersistAuthAsync(ok);
+                await OnSuccess.InvokeAsync(ok);
+                await OnClose.InvokeAsync();
+                return;
+            }
+
+            using var resp = await Http.PostAsJsonAsync("/api/auth/register", registerModel);
+            if (!resp.IsSuccessStatusCode)
+            {
+                error = await ReadErrorAsync(resp);
+                return;
+            }
+
+            var okReal = await resp.Content.ReadFromJsonAsync<AuthResult>();
+            if (okReal is null || string.IsNullOrWhiteSpace(okReal.Token))
+            {
+                error = "Invalid server response.";
+                return;
+            }
+
+            await PersistAuthAsync(okReal);
+            await OnSuccess.InvokeAsync(okReal);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Network error: " + ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task PersistAuthAsync(AuthResult ok)
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", ok.Token);
+        await JS.InvokeVoidAsync("localStorage.setItem", "auth_user", JsonSerializer.Serialize(ok.User));
+    }
+
+    // Error reader (works without Mvc/ProblemDetails)
+    private async Task<string?> ReadErrorAsync(HttpResponseMessage resp)
+    {
+        try
+        {
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("detail", out var detail))
+                return detail.GetString();
+            if (doc.RootElement.TryGetProperty("title", out var title))
+                return title.GetString();
+        }
+        catch { /* ignore parse errors */ }
+
+        var txt = await resp.Content.ReadAsStringAsync();
+        if (!string.IsNullOrWhiteSpace(txt)) return txt;
+        return $"Error {(int)resp.StatusCode}";
+    }
+
+    private void Close() => OnClose.InvokeAsync();
+    private void OnBackdropClick() => OnClose.InvokeAsync();
+
+    // ===== DTOs (ensure they are not duplicated elsewhere) =====
+    public sealed class LoginRequest
+    {
+        [Required(ErrorMessage = "Please enter phone number")]
+        [StringLength(20, MinimumLength = 7)]
+        public string Phone { get; set; } = "";
+
+        [Required(ErrorMessage = "Please enter password")]
+        [StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class RegisterRequest
+    {
+        [Required, StringLength(80)]
+        public string Name { get; set; } = "";
+
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required, StringLength(20, MinimumLength = 7)]
+        public string Phone { get; set; } = "";
+
+        [Required, StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class UserInfo
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string? Role { get; set; }
+    }
+
+    public sealed class AuthResult
+    {
+        public string Token { get; set; } = "";
+        public UserInfo User { get; set; } = new();
     }
 }
