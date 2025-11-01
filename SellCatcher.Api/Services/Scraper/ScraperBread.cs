@@ -29,7 +29,7 @@ namespace ProductScraper
 
             // Create Playwright instance
             using var playwright = await Playwright.CreateAsync();
-            
+
             // Launch Chromium in headless mode (with configurable slowdown to debug interactions)
             await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
@@ -63,26 +63,8 @@ namespace ProductScraper
                 page.PageError += (_, err) => Console.WriteLine($"PAGE ERROR: {err}");
             }
 
-            foreach (var catalogUrl in catalogUrls)
-            {
-                if (string.IsNullOrWhiteSpace(catalogUrl)) continue;
-
-                try
-                {
-                    if (_config.EnableLogging)
-                        Console.WriteLine($"Navigating to catalog: {catalogUrl}");
-
-                    var pageProducts = await ScrapeCatalogPageAsync(page, catalogUrl);
-                    products.AddRange(pageProducts);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error at {catalogUrl}: {ex.Message}");
-                    if (_config.SaveErrorScreenshots)
-                        await page.ScreenshotAsync(new PageScreenshotOptions { Path = $"error_{DateTime.Now:yyyyMMddHHmmss}.png", FullPage = true });
-                }
-            }
-
+            /// Start parsing for all links
+            products = await ScrapeCatalogsInParallelAsync(catalogUrls, context);
             await context.CloseAsync();
             return products;
         }
@@ -93,7 +75,7 @@ namespace ProductScraper
         private async Task<List<Product>> ScrapeCatalogPageAsync(IPage page, string catalogUrl)
         {
             var products = new List<Product>();
-            
+
             await page.GotoAsync(catalogUrl);
             await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
@@ -111,44 +93,35 @@ namespace ProductScraper
                 "[data-testid*='product-tile'], .ProductTile, .ProductTileLink"
             );
 
-            if (productElements.Count == 0)
-            {
-                var htmlPath = $"no_products_{DateTime.Now:yyyyMMddHHmmss}.html";
-                File.WriteAllText(htmlPath, html);
-                Console.WriteLine($"No products found. Saved page HTML to: {htmlPath}");
-                return products;
-            }
-            /// Review all found items
-            foreach (var product in productElements)
+            /// Processing each product
+            var tasks = productElements.Select(async product =>
             {
                 try
                 {
-                    /// Extract product name
+                    /// Extract name
                     var nameSel = await product.QuerySelectorAsync("[data-testid='product_tile_title']");
                     var name = nameSel != null ? (await nameSel.InnerTextAsync())?.Trim() : "";
 
-                    /// Extract product price
+                    /// Extract price
                     var priceSel = await product.QuerySelectorAsync("[data-marker='Discounted Price'] span.Price__value_body") ??
                                   await product.QuerySelectorAsync(".Price__value_caption") ??
                                   await product.QuerySelectorAsync(".Price__value_unavailable") ??
                                   await product.QuerySelectorAsync(".Price__value_discount");
                     var newPrice = priceSel != null ? (await priceSel.InnerTextAsync())?.Trim() : "";
 
-                    /// Extract product old price
+                    /// Extract old price
                     var oldPriceSel = await product.QuerySelectorAsync("[data-marker='Old Price'] span.Price__value_body") ??
                                      await product.QuerySelectorAsync(".ProductTile_oldPrice span") ??
                                      await product.QuerySelectorAsync(".Price__value_old");
                     var nonDiscountPrice = oldPriceSel != null ? (await oldPriceSel.InnerTextAsync())?.Trim() : "";
 
-                    /// Looking for text with discount
+                    /// Extract percent of discount
                     var discountSel = await product.QuerySelectorAsync("[data-marker='Discount']") ??
                                      await product.QuerySelectorAsync(".DiscountBadge") ??
                                      await product.QuerySelectorAsync("[class*='discount']") ??
                                      await product.QuerySelectorAsync("[class*='Discount']");
 
                     string discount = "";
-
-                    /// Clean up
                     if (discountSel != null)
                     {
                         var discountText = (await discountSel.InnerTextAsync())?.Trim() ?? "";
@@ -157,37 +130,29 @@ namespace ProductScraper
                             discount = match.Value.Trim();
                     }
 
-                    /// Extract duration of discounts
+                    /// Extract discount period
                     string validUntil = "";
-
                     var validUntilSel = await product.QuerySelectorAsync("[data-marker='Promotion_until_date']");
                     if (validUntilSel != null)
-                    {
                         validUntil = (await validUntilSel.InnerTextAsync())?.Replace("до", "").Trim() ?? "";
-                    }
 
                     if (string.IsNullOrWhiteSpace(discount))
-                    {
                         nonDiscountPrice = "";
-                    }
 
-                    /// Clean prices from symbols
+                    /// Removing blanks, punctuation marks and other rubbish
                     string CleanPrice(string p) => p.Replace(" ", "").Replace(",", ".").Replace("₴", "").Trim();
 
                     var cleanedNewPrice = CleanPrice(newPrice);
                     var cleanedOldPrice = CleanPrice(nonDiscountPrice);
 
-                    /// Convert rows to decimal
                     if (!decimal.TryParse(cleanedNewPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
-                    {
-                        continue;
-                    }
+                        return;
 
                     decimal? oldPrice = null;
                     if (decimal.TryParse(cleanedOldPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal priceOld))
                         oldPrice = priceOld;
 
-                    /// Create a model object
+                    /// Object formation
                     var p = new Product
                     {
                         Name = name,
@@ -199,275 +164,64 @@ namespace ProductScraper
                         Category = _category
                     };
 
-                    products.Add(p);
+                    /// Add to public list in parallel mode
+                    lock (products)
+                        products.Add(p);
+
                     Console.WriteLine($"Added: {p.Name} — {p.Price}₴ {(p.IsOnSale ? "(ALARM! It`s SALE)" : "")}");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Failed to add product: {ex.Message}");
                 }
-            }
+            });
+            await Task.WhenAll(tasks);
             Console.WriteLine($"Total products added: {products.Count}");
             return products;
         }
 
         /// <summary>
-        /// Extracts product information from raw text using regex patterns
+        /// Opens each URL in a new Playwright page, collects product data from all pages,
+        /// and returns a combined list of all extracted products.
         /// </summary>
-        private Product ExtractProduct(string text)
+        /// <param name="catalogUrls">A list of catalog page URLs to scrape</param>
+        /// <param name="context">An existing Playwright browser context used to create new pages</param>
+        /// <returns>Сombined list of objects extracted from all provided URLs</returns>
+        private async Task<List<Product>> ScrapeCatalogsInParallelAsync(List<string> catalogUrls, IBrowserContext context)
         {
-            // Regex patterns:
-            // salePattern: Based on the actual format from debug output
-            var salePattern = @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴до\s*(\d{2}\.\d{2})\s*(.+)";
-            var saleMatch = Regex.Match(text, salePattern);
-            
-            if (saleMatch.Success)
+            var allProducts = new List<Product>();
+            var semaphore = new SemaphoreSlim(3);
+
+            /// Parallel processing
+            var tasks = catalogUrls.Select(async url =>
             {
-                if (_config.EnableDebugOutput)
+                if (string.IsNullOrWhiteSpace(url)) return;
+
+                /// Wrapper of semaphore
+                await semaphore.WaitAsync();
+                try
                 {
-                    Console.WriteLine($"DEBUG: SALE PATTERN MATCHED! Groups: {saleMatch.Groups.Count}");
-                    for (int i = 0; i < saleMatch.Groups.Count; i++)
-                        Console.WriteLine($"  Group {i}: '{saleMatch.Groups[i].Value}'");
-                }
-                
-                // --- SALE ITEM ---
-                var discount = saleMatch.Groups[1].Value.Trim();
-                var oldPrice = saleMatch.Groups[2].Value.Trim(); // Already without ₴
-                var newPrice = saleMatch.Groups[3].Value.Trim(); // Already without ₴
-                var untilDate = saleMatch.Groups[4].Value.Trim();
-                var name = CleanProductName(saleMatch.Groups[5].Value);
+                    Console.WriteLine($"Parsing: {url}");
+                    var page = await context.NewPageAsync();
+                    var pageProducts = await ScrapeCatalogPageAsync(page, url);
+                    await page.CloseAsync();
 
-                if (IsValidProduct(newPrice, name))
+                    lock (allProducts)
+                        allProducts.AddRange(pageProducts);
+                }
+                catch (Exception ex)
                 {
-                    return new Product
-                    {
-                        Name = name,
-                        Price = ParsePrice(newPrice),
-                        OldPrice = ParsePrice(oldPrice),
-                        Discount = discount,
-                        ValidUntil = untilDate,
-                        IsOnSale = true
-                    };
+                    Console.WriteLine($"{url}: {ex.Message}");
                 }
-            }
-            else
-            {
-                // Also, let's make the sale pattern more flexible:
-                // Try these alternative patterns if the main one fails:
-                if (_config.EnableDebugOutput && (text.Contains("%") || Regex.Matches(text, @"₴").Count > 1))
+                finally
                 {
-                    TryAlternativeSalePatterns(text);
+                    semaphore.Release();
                 }
+            });
 
-                var bulkPattern = @"^ОПТ\s*([\d.,]+)\s*₴\s*від\s*\d+\s*шт\s*(?:\.\.\.)?\s*([\d.,]+)\s*₴\s*(.+)";
-                var bulkMatch = Regex.Match(text, bulkPattern);
-
-                if (bulkMatch.Success)
-                {
-                    // --- BULK ITEM ---
-                    var bulkPrice = bulkMatch.Groups[1].Value.Trim();
-                    var retailPrice = bulkMatch.Groups[2].Value.Trim();
-                    var name = CleanProductName(bulkMatch.Groups[3].Value);
-
-                    if (IsValidProduct(retailPrice, name))
-                    {
-                        return new Product
-                        {
-                            Name = name,
-                            Price = ParsePrice(retailPrice),
-                            BulkPrice = ParsePrice(bulkPrice),
-                            IsOnSale = false,
-                            IsBulk = true
-                        };
-                    }
-                }
-
-                // normalPattern: just price + product name (excluding cases with multiple prices/discounts)
-                var normalPattern = @"^([\d.,]+)\s*₴\s*(?![\d.,]+\s*₴|до\s*\d|\d+\.\d+|.*%)(.*?)(?:\s+до\s+\d+\.\d+|\s+\d+\.\d+\s*₴|$)";
-                var normalMatch = Regex.Match(text, normalPattern);
-                
-                if (normalMatch.Success)
-                {
-                    // --- NORMAL ITEM ---
-                    var price = normalMatch.Groups[1].Value.Trim();
-                    var name = CleanProductName(normalMatch.Groups[2].Value);
-                    
-                    if (IsValidProduct(price, name))
-                    {
-                        return new Product
-                        {
-                            Name = name,
-                            Price = ParsePrice(price),
-                            IsOnSale = false
-                        };
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Tries alternative regex patterns for sale items (for debugging purposes)
-        /// </summary>
-        private void TryAlternativeSalePatterns(string text)
-        {
-            // More flexible patterns to try:
-            var alternativePatterns = new[]
-            {
-                @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴.*?(\d{2}\.\d{2}).*?(.+)",  // More flexible spacing
-                @"([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*(.+)",                    // Without date requirement
-                @"([\d.,]+)\s*₴\s*([\d.,]+)\s*₴\s*([+\-]?\d+\s*%)\s*(.+)",                   // Percentage at end
-                @"(.+?)\s*([+\-]?\d+\s*%)\s*([\d.,]+)\s*₴\s*([\d.,]+)\s*₴",                   // Name first
-            };
-            
-            foreach (var pattern in alternativePatterns)
-            {
-                var altMatch = Regex.Match(text, pattern);
-                if (altMatch.Success)
-                {
-                    Console.WriteLine($"DEBUG: ALTERNATIVE SALE PATTERN MATCHED: {pattern}");
-                    Console.WriteLine($"DEBUG: Text was: '{text}'");
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Prints product information to console
-        /// </summary>
-        private void PrintProduct(Product product)
-        {
-            if (product.IsOnSale)
-            {
-                Console.WriteLine("=== SALE ITEM ===");
-                Console.WriteLine($"Знижка: {product.Discount}");
-                Console.WriteLine($"Стара ціна: {product.OldPrice}");
-                Console.WriteLine($"Нова ціна: {product.Price}");
-                Console.WriteLine($"Діє до: {product.ValidUntil}");
-                Console.WriteLine($"Назва: {product.Name}");
-                Console.WriteLine("==================");
-            }
-            else if (product.IsBulk)
-            {
-                Console.WriteLine("=== BULK ITEM ===");
-                Console.WriteLine($"Опт ціна: {product.BulkPrice}");
-                Console.WriteLine($"Роздрібна ціна: {product.Price}");
-                Console.WriteLine($"Назва: {product.Name}");
-                Console.WriteLine("==================");
-            }
-            else
-            {
-                Console.WriteLine("=== NORMAL ITEM ===");
-                Console.WriteLine($"Ціна: {product.Price}");
-                Console.WriteLine($"Назва: {product.Name}");
-                Console.WriteLine("==================");
-            }
-        }
-
-        // --- HELPER METHODS ---
-
-        /// <summary>
-        /// Skip texts that are clearly not product data
-        /// </summary>
-        private static bool ShouldSkipText(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return true;
-            
-            // Pure numbers only (not valid products)
-            if (Regex.IsMatch(text, @"^\s*\d+\s*$")) return true;
-            
-            // Very short texts that don't include a price
-            if (text.Length < 5 && !text.Contains("₴")) return true;
-            
-            // No price and no letters → likely junk
-            if (!text.Contains("₴") && !text.Any(char.IsLetter)) return true;
-            
-            return false;
-        }
-
-        /// <summary>
-        /// Validates product data: checks that price & name are reasonable
-        /// </summary>
-        private static bool IsValidProduct(string price, string name)
-        {
-            if (!IsValidPrice(price)) return false;
-            
-            if (string.IsNullOrWhiteSpace(name)) return false;
-            if (name.Length < 3) return false;
-            if (!name.Any(char.IsLetter)) return false;
-
-            // Reject names that are mostly numbers (e.g., "123 456 789")
-            var letterCount = name.Count(char.IsLetter);
-            var digitCount = name.Count(char.IsDigit);
-            if (digitCount > letterCount && letterCount < 3) return false;
-            
-            return true;
-        }
-
-        /// <summary>
-        /// Checks that the price is numeric and within reasonable bounds
-        /// </summary>
-        private static bool IsValidPrice(string price)
-        {
-            if (string.IsNullOrWhiteSpace(price)) return false;
-            
-            var cleanPrice = price.Replace(" ", "").Replace(",", ".");
-            if (!decimal.TryParse(cleanPrice, out decimal priceValue)) return false;
-            
-            return priceValue >= 0.01m && priceValue <= 100000m;
-        }
-
-        /// <summary>
-        /// Parses price string to decimal value
-        /// </summary>
-        private static decimal ParsePrice(string price)
-        {
-            var cleanPrice = price.Replace(" ", "").Replace(",", ".");
-            decimal.TryParse(cleanPrice, out decimal priceValue);
-            return priceValue;
-        }
-
-        /// <summary>
-        /// Cleans up product name: removes garbage, duplicate weights/volumes, trims whitespace
-        /// </summary>
-        private static string CleanProductName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return "";
-            
-            name = name.Trim();
-            
-            // Remove trailing patterns like "до 12.12", "250.0 ₴", or stray decimals
-            name = Regex.Replace(name, @"\s*до\s*\d+\.\d+.*$", "", RegexOptions.IgnoreCase);
-            name = Regex.Replace(name, @"\s*\d+\.\d+\s*₴.*$", "", RegexOptions.IgnoreCase);
-            name = Regex.Replace(name, @"\s*\d+\.\d+\s*$", "", RegexOptions.IgnoreCase);
-            
-            // Deduplicate repeating weight/volume units
-            name = Regex.Replace(name, @"(\d+\s*г)\s+\1\b", "$1");
-            name = Regex.Replace(name, @"(\d+\s*мл)\s+\1\b", "$1");
-            name = Regex.Replace(name, @"(\d+)\s*г\s+\1\s*г\b", "$1г");
-            name = Regex.Replace(name, @"(\d+)\s*мл\s+\1\s*мл\b", "$1мл");
-            
-            // Legacy duplicate handling
-            name = Regex.Replace(name, @"(\d+\s*г)(?:\s*\d+\s*г)+", "$1");
-            name = Regex.Replace(name, @"(\d+\s*г)(?:\s*\1)+", "$1", RegexOptions.IgnoreCase);
-            name = Regex.Replace(name, @"(\d+\s*мл)(?:\s*\1)+", "$1", RegexOptions.IgnoreCase);
-            
-            // Normalize whitespace
-            name = Regex.Replace(name, @"\s+", " ");
-            
-            return name.Trim();
-        }
-
-        /// <summary>
-        /// Creates a unique key from product name + price (case-insensitive, symbols removed)
-        /// </summary>
-        private static string CreateProductKey(string name, string price)
-        {
-            var cleanName = Regex.Replace(name.ToLower(), @"[^\w\s]", "");
-            cleanName = Regex.Replace(cleanName, @"\s+", " ").Trim();
-            
-            return $"{cleanName}_{price}";
+            await Task.WhenAll(tasks);
+            return allProducts;
         }
     }
 }
+        
