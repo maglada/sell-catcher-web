@@ -41,7 +41,6 @@
                         }
                         else
                         {
-
                             <span>Sign In</span>
                         }
                     </button>
@@ -92,7 +91,6 @@
                         }
                         else
                         {
-
                             <span>Register</span>
                         }
                     </button>
@@ -109,30 +107,18 @@
 </div>
 
 @code {
-    // Set to false when backend is ready.
-    private const bool UseFakeApi = true;
+    private const bool UseFakeApi = false;
 
-    // UI state
     string Class = "modal";
     bool Enter = true;
     bool isBusy = false;
     string? error;
 
-    // Callbacks
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<AuthResult> OnSuccess { get; set; }
 
-    // Form models
     LoginRequest loginModel = new();
     RegisterRequest registerModel = new();
-
-    // In-memory "database" for fake mode (phone -> password)
-    private static readonly Dictionary<string, (string Password, UserInfo User)> FakeUsers =
-    new()
-    {
-{ "+380000000000", ("Secret123", new UserInfo { Id="u1", Name="Demo User", Email="demo@example.com",
-Phone="+380000000000", Role="User" }) }
-    };
 
     private void SignTypeIn()
     {
@@ -156,37 +142,51 @@ Phone="+380000000000", Role="User" }) }
         {
             if (UseFakeApi)
             {
-                await Task.Delay(400); // simulate latency
-                if (FakeUsers.TryGetValue(loginModel.Phone, out var entry) && entry.Password == loginModel.Password)
-                {
-                    var ok = new AuthResult { Token = "fake-jwt-token", User = entry.User };
-                    await PersistAuthAsync(ok);
-                    await OnSuccess.InvokeAsync(ok);
-                    await OnClose.InvokeAsync();
-                }
-                else
-                {
-                    error = "Invalid phone or password (fake mode).";
-                }
+                await Task.Delay(400);
                 return;
             }
 
-            using var resp = await Http.PostAsJsonAsync("/api/auth/login", loginModel);
+            var body = new LoginRequestDto
+            {
+                UserName = loginModel.Phone,
+                Password = loginModel.Password
+            };
+
+            using var resp = await Http.PostAsJsonAsync("/api/login", body);
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                error = "Invalid phone or password.";
+                return;
+            }
             if (!resp.IsSuccessStatusCode)
             {
                 error = await ReadErrorAsync(resp);
                 return;
             }
 
-            var okReal = await resp.Content.ReadFromJsonAsync<AuthResult>();
-            if (okReal is null || string.IsNullOrWhiteSpace(okReal.Token))
+            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
+            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
             {
                 error = "Invalid server response.";
                 return;
             }
 
-            await PersistAuthAsync(okReal);
-            await OnSuccess.InvokeAsync(okReal);
+            var ok = new AuthResult
+            {
+                Token = okJson.Token,
+                User = new UserInfo
+                {
+                    Id = "",
+                    Name = loginModel.Phone,
+                    Email = "",
+                    Phone = loginModel.Phone,
+                    Role = "User"
+                }
+            };
+
+            await PersistAuthAsync(ok);
+            await OnSuccess.InvokeAsync(ok);
             await OnClose.InvokeAsync();
         }
         catch (Exception ex)
@@ -207,48 +207,41 @@ Phone="+380000000000", Role="User" }) }
         {
             if (UseFakeApi)
             {
-                await Task.Delay(400); // simulate latency
-
-                if (FakeUsers.ContainsKey(registerModel.Phone))
-                {
-                    error = "User with this phone already exists (fake mode).";
-                    return;
-                }
-
-                var user = new UserInfo
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    Name = registerModel.Name,
-                    Email = registerModel.Email,
-                    Phone = registerModel.Phone,
-                    Role = "User"
-                };
-
-                FakeUsers[registerModel.Phone] = (registerModel.Password, user);
-
-                var ok = new AuthResult { Token = "fake-jwt-token", User = user };
-                await PersistAuthAsync(ok);
-                await OnSuccess.InvokeAsync(ok);
-                await OnClose.InvokeAsync();
+                await Task.Delay(400);
                 return;
             }
 
-            using var resp = await Http.PostAsJsonAsync("/api/auth/register", registerModel);
+            var dto = ToRegisterDto(registerModel);
+
+            using var resp = await Http.PostAsJsonAsync("/api/register", dto);
             if (!resp.IsSuccessStatusCode)
             {
                 error = await ReadErrorAsync(resp);
                 return;
             }
 
-            var okReal = await resp.Content.ReadFromJsonAsync<AuthResult>();
-            if (okReal is null || string.IsNullOrWhiteSpace(okReal.Token))
+            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
+            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
             {
                 error = "Invalid server response.";
                 return;
             }
 
-            await PersistAuthAsync(okReal);
-            await OnSuccess.InvokeAsync(okReal);
+            var ok = new AuthResult
+            {
+                Token = okJson.Token,
+                User = new UserInfo
+                {
+                    Id = "",
+                    Name = registerModel.Name,
+                    Email = registerModel.Email,
+                    Phone = registerModel.Phone,
+                    Role = "User"
+                }
+            };
+
+            await PersistAuthAsync(ok);
+            await OnSuccess.InvokeAsync(ok);
             await OnClose.InvokeAsync();
         }
         catch (Exception ex)
@@ -261,13 +254,27 @@ Phone="+380000000000", Role="User" }) }
         }
     }
 
+    private RegisterRequestDto ToRegisterDto(RegisterRequest r)
+    {
+        var parts = (r.Name ?? "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var first = parts.Length > 0 ? parts[0] : "";
+        var last = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : "";
+
+        return new RegisterRequestDto
+        {
+            UserName = r.Phone,
+            FirstName = first,
+            LastName = last,
+            Password = r.Password
+        };
+    }
+
     private async Task PersistAuthAsync(AuthResult ok)
     {
         await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", ok.Token);
         await JS.InvokeVoidAsync("localStorage.setItem", "auth_user", JsonSerializer.Serialize(ok.User));
     }
 
-    // Error reader (works without Mvc/ProblemDetails)
     private async Task<string?> ReadErrorAsync(HttpResponseMessage resp)
     {
         try
@@ -279,7 +286,7 @@ Phone="+380000000000", Role="User" }) }
             if (doc.RootElement.TryGetProperty("title", out var title))
                 return title.GetString();
         }
-        catch { /* ignore parse errors */ }
+        catch { }
 
         var txt = await resp.Content.ReadAsStringAsync();
         if (!string.IsNullOrWhiteSpace(txt)) return txt;
@@ -289,7 +296,6 @@ Phone="+380000000000", Role="User" }) }
     private void Close() => OnClose.InvokeAsync();
     private void OnBackdropClick() => OnClose.InvokeAsync();
 
-    // ===== DTOs (ensure they are not duplicated elsewhere) =====
     public sealed class LoginRequest
     {
         [Required(ErrorMessage = "Please enter phone number")]
@@ -316,6 +322,20 @@ Phone="+380000000000", Role="User" }) }
         public string Password { get; set; } = "";
     }
 
+    public sealed class LoginRequestDto
+    {
+        public string UserName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class RegisterRequestDto
+    {
+        public string UserName { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
     public sealed class UserInfo
     {
         public string Id { get; set; } = "";
@@ -329,5 +349,11 @@ Phone="+380000000000", Role="User" }) }
     {
         public string Token { get; set; } = "";
         public UserInfo User { get; set; } = new();
+    }
+
+    public sealed class AuthResultFromApi
+    {
+        public string? Message { get; set; }
+        public string Token { get; set; } = "";
     }
 }
