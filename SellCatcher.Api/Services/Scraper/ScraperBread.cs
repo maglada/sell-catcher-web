@@ -152,6 +152,16 @@ namespace ProductScraper
                     if (decimal.TryParse(cleanedOldPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal priceOld))
                         oldPrice = priceOld;
 
+                    /// Convert string to date
+                    DateTime? trueValidUntil = null;
+                    if (DateTime.TryParseExact(validUntil, "dd.MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                    {
+                        dt = new DateTime(DateTime.Now.Year, dt.Month, dt.Day);
+                        if (dt < DateTime.Now)
+                            dt = dt.AddYears(1);
+                        trueValidUntil = dt;
+                    }
+
                     /// Object formation
                     var p = new Product
                     {
@@ -160,7 +170,7 @@ namespace ProductScraper
                         OldPrice = oldPrice,
                         Discount = discount,
                         IsOnSale = !string.IsNullOrEmpty(discount) || oldPrice.HasValue,
-                        ValidUntil = validUntil,
+                        ValidUntil = trueValidUntil,
                         Category = _category
                     };
 
