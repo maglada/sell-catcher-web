@@ -1,27 +1,148 @@
 @using System.Globalization
+@using System.Net.Http.Json
 @inject HttpClient Http
 
-<!--List of products that are got from -->
 <div class="products-container">
-    @foreach (var product in Products)
+    @if (isLoading)
     {
-        if (product.Price >= FilteredPriceMin
-        && product.Price <= FilteredPriceMax
-        && (FilteredShops.Count == 0 || FilteredShops.Contains(product.Shop)))
+        <p>Завантаження…</p>
+    }
+    else if (loadError is not null)
+    {
+        <p class="error">@loadError</p>
+    }
+    else if (PagedProducts.Any())
+    {
+        @foreach (var product in PagedProducts)
         {
             <button class="product-button">
                 <img src="@product.ImageUrl" alt="@product.Name" />
-                <span class="price">від @product.Price.ToString("C", new System.Globalization.CultureInfo("uk-UA"))</span>
+                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
                 <span class="name">@product.Name</span>
             </button>
         }
+
+        <div class="pagination">
+            <button @onclick="PrevPage" disabled="@(Page == 1)">« Назад</button>
+            <span>Сторінка @Page із @TotalPages</span>
+            <button @onclick="NextPage" disabled="@(Page == TotalPages)">Далі »</button>
+        </div>
+    }
+    else
+    {
+        <p>Немає продуктів за вибраними фільтрами.</p>
     }
 </div>
 
 @code {
+    // Параметри від батьківської сторінки
     [Parameter] public int FilteredPriceMin { get; set; }
     [Parameter] public int FilteredPriceMax { get; set; }
-    [Parameter] public List<string> FilteredShops { get; set; } = new();
+    [Parameter] public IEnumerable<string> FilteredShops { get; set; } = Array.Empty<string>();
+
+    // Дані
+    private List<Product> Products = new();
+    private List<Product> FilteredProducts = new();
+    private List<Product> PagedProducts = new();
+
+    // Пагінація
+    private int Page = 1;
+    private int PageSize = 9;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredProducts.Count / PageSize));
+
+    // Завантаження/помилки
+    private bool isLoading = true;
+    private string? loadError;
+
+    // 1) Перший запуск: тягнемо дані
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+        ApplyFilters();
+    }
+
+    // 2) Будь-яка зміна параметрів з батька — перерахувати фільтри
+    protected override void OnParametersSet()
+    {
+        if (!isLoading)
+            ApplyFilters();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            // Коли буде API:
+            // Products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
+
+            // Поки — мокові дані:
+            await Task.Delay(200);
+            for (int i = 1; i <= 42; i++)
+            {
+                Products.Add(new Product
+                {
+                    Id = i,
+                    Name = $"Product {i}",
+                    Price = 10 + i,
+                    ImageUrl = "/images/potato.jpg",
+                    Shop = (i % 2 == 0) ? "Новус" : "АТБ"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = "Не вдалося завантажити продукти: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // Застосування фільтрів + скидання на 1 сторінку
+    private void ApplyFilters()
+    {
+        var shops = (FilteredShops ?? Array.Empty<string>()).ToHashSet();
+
+        FilteredProducts = Products
+        .Where(p => p.Price >= FilteredPriceMin &&
+        p.Price <= FilteredPriceMax &&
+        (shops.Count == 0 || shops.Contains(p.Shop)))
+        .ToList();
+
+        Page = 1;
+        UpdatePagedProducts();
+    }
+
+    private void UpdatePagedProducts()
+    {
+        PagedProducts = FilteredProducts
+        .Skip((Page - 1) * PageSize)
+        .Take(PageSize)
+        .ToList();
+        StateHasChanged();
+    }
+
+    private void NextPage()
+    {
+        if (Page < TotalPages)
+        {
+            Page++;
+            UpdatePagedProducts();
+        }
+    }
+
+    private void PrevPage()
+    {
+        if (Page > 1)
+        {
+            Page--;
+            UpdatePagedProducts();
+        }
+    }
 
     public class Product
     {
@@ -31,73 +152,4 @@
         public string ImageUrl { get; set; } = "";
         public string Shop { get; set; } = "";
     }
-
-
-    private List<Product> Products = new();
-    private bool isLoading = true;
-    private string? loadError;
-
-    /*private IEnumerable<Product> FilteredProducts
-    {
-    get
-    {
-    return Products.Where(p =>
-    p.Price >= FilteredPriceMin &&
-    p.Price <= FilteredPriceMax &&
-    (FilteredShops.Count == 0 || FilteredShops.Contains(p.Shop)));
-    }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-    await LoadProductsAsync();
-    }
-    private async Task LoadProductsAsync()
-    {
-    try
-    {
-    isLoading = true;
-    loadError = null;
-    Products = await Http.GetFromJsonAsync<List<Product>>("api/products")
-    ?? new List<Product>();
-    }
-    catch (Exception ex)
-    {
-    loadError = "Не вдалося завантажити продукти: " + ex.Message;
-    }
-    finally
-    {
-    isLoading = false;
-    }
-    }
-
-    */
-
-
-
-
-
-
-
-
-
-
-
-
-
-    protected override void OnInitialized()
-    {
-        for (int i = 1; i <= 30; i++)
-        {
-            string tempShop = (i % 2 == 0) ? "Новус" : "АТБ";
-            Products.Add(new Product
-            {
-                Name = $"Product {i}",
-                Price = 10 + i,
-                ImageUrl = "/images/potato.jpg",
-                Shop = tempShop
-            });
-        }
-    }
-
 }

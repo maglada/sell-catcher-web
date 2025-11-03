@@ -1,80 +1,59 @@
 @page "/categories"
-@*Defines the route for this page in Blazor
-Custom component for searching products*@
-
 
 <div class="page-layout">
     <aside class="sidebar">
         <div>
-            Ключові слова
+            <strong>Ключові слова</strong>
         </div>
 
         <div>
-            Країна<br />
-            @* Regular HTML checkboxes (not bound to C# yet) *@
-            <input type="checkbox" name="contry" id="Moroko"> Мороко<br />
-            <input type="checkbox" name="contry" id="Brazil"> Бразилія<br />
-            <input type="checkbox" name="contry" id="Turkey"> Туреччина<br />
-            <input type="checkbox" name="contry" id="China"> Чина<br />
-            <input type="checkbox" name="contry" id="Ukraine"> Україна<br />
+            <strong>Країна</strong><br />
+            <input type="checkbox" name="country" id="Moroko"> Мороко<br />
+            <input type="checkbox" name="country" id="Brazil"> Бразилія<br />
+            <input type="checkbox" name="country" id="Turkey"> Туреччина<br />
+            <input type="checkbox" name="country" id="China"> Китай<br />
+            <input type="checkbox" name="country" id="Ukraine"> Україна<br />
         </div>
 
         <div>
-            @* Price range displayed using C# variables *@
-            <p>Ціна @MinPrice₴ - @MaxPrice₴</p>
-
-            @* Custom Blazor component that triggers an event when range changes *@
+            <p><strong>Ціна</strong> @MinPrice₴ – @MaxPrice₴</p>
             <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
-
-            <p></p>
         </div>
 
         <div>
-            Фасування<br />
-            @* Just static checkboxes, not bound to C# yet *@
-            <input type="checkbox" name="packaging" id="packeged"> Фасований<br />
+            <strong>Фасування</strong><br />
+            <input type="checkbox" name="packaging" id="packaged"> Фасований<br />
             <input type="checkbox" name="packaging" id="gravimetric"> Грамовий
         </div>
 
         <div>
-        </div>
-
-        <div>
-            <p>Магазин</p>
-            @* @bind automatically syncs C# variable with checkbox state *@
+            <p><strong>Магазин</strong></p>
             <input type="checkbox" @bind="ShowATB" /> АТБ<br />
             <input type="checkbox" @bind="ShowNovus" /> Новус
-        </div>
-
-        <div>
         </div>
     </aside>
 
     <main class="content">
-        @* Passes filter values as parameters to ProductList component *@
         <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
     </main>
 </div>
 
 @code {
-    // Variables used for UI state (connected to inputs via @bind)
     private bool ShowATB = true;
     private bool ShowNovus = true;
     private int MinPrice = 0;
     private int MaxPrice = 100;
 
-    // Returns selected shops as a list of strings for filtering
-    private List<string> GetSelectedShops()
+    private void OnRangeChangedPrice((int min, int max) range)
     {
-        var list = new List<string>();
-        if (ShowATB) list.Add("АТБ");
-        if (ShowNovus) list.Add("Новус");
-        return list;
+        MinPrice = range.min;
+        MaxPrice = range.max;
+        StateHasChanged();
     }
 
-    // Called by PriceRangeSlider when user changes range
-    private void OnRangeChangedPrice((int, int) range)
+    private IEnumerable<string> GetSelectedShops()
     {
-        (MinPrice, MaxPrice) = range; // Tuple deconstruction
+        if (ShowATB) yield return "АТБ";
+        if (ShowNovus) yield return "Новус";
     }
 }
