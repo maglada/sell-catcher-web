@@ -19,7 +19,6 @@
         {
             <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
                 <DataAnnotationsValidator />
-                <ValidationSummary />
 
                 <div style="margin-top:10px;">
                     <label>Phone number</label><br />
@@ -57,7 +56,6 @@
         {
             <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
                 <DataAnnotationsValidator />
-                <ValidationSummary />
 
                 <div style="margin-top:10px;">
                     <label>Name</label><br />
@@ -94,7 +92,6 @@
                             <span>Register</span>
                         }
                     </button>
-                    <button type="button" class="button-secondary" disabled="@isBusy" @onclick="Close">Cancel</button>
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(error))
