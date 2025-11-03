@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
 using SellCatcher.Api.Models;
+using ProductScraper;
 
 namespace SellCatcher.Api.Services
 {
@@ -22,7 +23,7 @@ namespace SellCatcher.Api.Services
         }
 
 
-        public List<NOVUSProduct> GetAll()
+        public List<Product> GetAll()
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores").FindAll();
@@ -32,16 +33,16 @@ namespace SellCatcher.Api.Services
             return allProducts;
         }
 
-        public List<NOVUSProduct> GetByStore(int storeId)
+        public List<Product> GetByStore(int storeId)
         {
             using var db = new LiteDatabase(_dbPath);
             var store = db.GetCollection<Store>("stores").FindById(storeId);
-            if (store == null) return new List<NOVUSProduct>();
+            if (store == null) return new List<Product>();
 
             return store.Categories.SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
         }
 
-        public NOVUSProduct? GetById(int id)
+        public Product? GetById(int id)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
@@ -59,7 +60,7 @@ namespace SellCatcher.Api.Services
             return null;
         }
 
-        public void Add(NOVUSProduct discount)
+        public void Add(Product discount)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");

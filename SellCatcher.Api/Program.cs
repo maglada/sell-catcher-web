@@ -45,22 +45,24 @@ app.Run();
 /// <summary>
 /// --------------Run Parser----------------
 /// </summary>
-// using static SellCatcher.Api.Services.ParserProductService;
 
-// class Test
-// {
+//class Test
+//{
 //    static async Task Main()
 //    {
-//        await TestParserRun();
+//        Console.WriteLine("Enter store name to parse (Novus / Silpo):");
+//        string storeName = Console.ReadLine()?.Trim().ToUpper() ?? "NOVUS";
+
+//        await TestParserRun(storeName);
 //    }
 
-//    static async Task TestParserRun()
+//    static async Task TestParserRun(string storeName)
 //    {
-//        Console.WriteLine("Start parsing Novus...\n");
+//        Console.WriteLine($"Starting parsing {storeName}...\n");
 
 //        try
 //        {
-//            var factory = new ScraperFactory(new ScraperConfig
+//            var config = new ScraperConfig
 //            {
 //                Headless = true,
 //                EnableLogging = true,
@@ -68,13 +70,21 @@ app.Run();
 //                SaveDebugScreenshots = false,
 //                SaveErrorScreenshots = false,
 //                SlowMo = 1000
-//            });
+//            };
 
+//            var factory = new ScraperFactory(config);
 //            string sitesFolder = Path.Combine(AppContext.BaseDirectory, "sites");
+
+//            string filePattern = storeName switch
+//            {
+//                "NOVUS" => "NovusLinks_*.txt",
+//                "SILPO" => "SilpoLinks_*.txt",
+//                _ => throw new ArgumentException("Unknown store!")
+//            };
 
 //            var results = await factory.ProcessAllFilesAsync(
 //                directory: sitesFolder,
-//                filePattern: "NovusLinks_*.txt"
+//                filePattern: filePattern
 //            );
 
 //            var productService = new ParserProductService.ProductService();
@@ -83,24 +93,23 @@ app.Run();
 
 //            foreach (var result in results)
 //            {
-//                string fileName = result.Key;
 //                var products = result.Value;
 //                totalProducts += products.Count;
-//                int saved = productService.SaveProducts(products, storeName: "NOVUS");
+//                int saved = productService.SaveProducts(products, storeName);
 //                totalSaved += saved;
 //            }
 
-//            Console.WriteLine($"\nTotal products parsed: {totalProducts}");
+//            Console.WriteLine($"\nTotal products parsed: {totalProducts} from {storeName}");
 //            Console.WriteLine($"Saved to DB: {totalSaved}\n");
-//            Console.WriteLine("Goods categories for NOVUS:\n");
 
-//            var categories = productService.GetCategories("NOVUS");
+//            var categories = productService.GetCategories(storeName);
+//            Console.WriteLine($"Categories for {storeName}:");
 
 //            foreach (var category in categories)
 //            {
-//                var categoryProducts = category.Products;
-//                var onSaleCount = categoryProducts.Count(p => p.IsOnSale);
-//                Console.WriteLine($"{category.Name}: {categoryProducts.Count} products ({onSaleCount} with discount)");
+//                int count = category.Products.Count;
+//                int onSaleCount = category.Products.Count(p => p.IsOnSale);
+//                Console.WriteLine($"  {category.Name}: {count} products ({onSaleCount} with discount)");
 //            }
 
 //            Console.WriteLine("\nParsing finished.");
@@ -112,4 +121,4 @@ app.Run();
 
 //        Console.ReadKey();
 //    }
-// }
+//}

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
+using ProductScraper;
 
 namespace SellCatcher.Api.Controllers
 
@@ -41,7 +42,7 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpPost] /*Эндпоинт добавления новой скидки*/
-        public IActionResult Add([FromBody] NOVUSProduct discount)
+        public IActionResult Add([FromBody] Product discount)
         {
             if (discount == null) return NotFound();
             _discountService.Add(discount);

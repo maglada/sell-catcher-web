@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
+using ProductScraper;
 
 namespace SellCatcher.Api.Models
 {
@@ -11,6 +12,6 @@ namespace SellCatcher.Api.Models
     public class Category
     {
         public string Name { get; set; } = "";
-        public List<NOVUSProduct> Products { get; set; } = new();
+        public List<Product> Products { get; set; } = new();
     }
 }
