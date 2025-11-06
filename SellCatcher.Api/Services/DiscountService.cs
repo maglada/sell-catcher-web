@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
 using SellCatcher.Api.Models;
+using ProductScraper;
 
 namespace SellCatcher.Api.Services
 {
@@ -22,7 +23,7 @@ namespace SellCatcher.Api.Services
         }
 
 
-        public List<NOVUSProduct> GetAll()
+        public List<Product> GetAll()
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores").FindAll();
@@ -32,16 +33,16 @@ namespace SellCatcher.Api.Services
             return allProducts;
         }
 
-        public List<NOVUSProduct> GetByStore(int storeId)
+        public List<Product> GetByStore(int storeId)
         {
             using var db = new LiteDatabase(_dbPath);
             var store = db.GetCollection<Store>("stores").FindById(storeId);
-            if (store == null) return new List<NOVUSProduct>();
+            if (store == null) return new List<Product>();
 
             return store.Categories.SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
         }
 
-        public NOVUSProduct? GetById(int id)
+        public Product? GetById(Guid id)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
@@ -59,23 +60,34 @@ namespace SellCatcher.Api.Services
             return null;
         }
 
-        public void Add(NOVUSProduct discount)
+        public void Add(string storeName, Product discount)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
+            var store = stores.FindOne(x => x.Name == storeName);
+            if (store == null)
+            {
+                store = new Store
+                {
+                    Name = storeName,
+                    Categories = new List<Category>()
+                };
+            }
 
-            var store = stores.FindOne(x => x.Name == "NOVUS") ?? new Store { Name = "NOVUS" };
-            var category = store.Categories.FirstOrDefault() ?? new Category { Name = "New Category" };
-
-            int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
-
-            discount.Id = nextId;
-            category.Products.Add(discount);
-
-            if (!store.Categories.Any())
+            var category = store.Categories.FirstOrDefault(c => c.Name == discount.Category);
+            if (category == null)
+            {
+                category = new Category
+                {
+                    Name = discount.Category,
+                    Products = new List<Product>()
+                };
                 store.Categories.Add(category);
-
-            stores.Update(store);
+            }
+            category.Products ??= new List<Product>();
+            discount.Id = Guid.NewGuid(); 
+            category.Products.Add(discount);
+            stores.Upsert(store);
         }
     }
 }

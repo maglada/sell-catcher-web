@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SellCatcher.Api\SellCatcher.Api.csproj" />
-    <ProjectReference Include="..\SellCatcher.BDConsole\SellCatcher.BDConsole.csproj" />
   </ItemGroup>
 
   <ItemGroup>

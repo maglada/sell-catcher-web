@@ -9,10 +9,12 @@ using ProductScraper;
 
 namespace SellCatcher.Api.Services
 {
+    /// Service responsible for saving, updating and retrieving parsed product data from multiple stores
     public class ParserProductService
     {
         public class ProductService
         {
+            /// Where is the database
             private readonly string _dbPath;
             public ProductService()
             {
@@ -23,21 +25,31 @@ namespace SellCatcher.Api.Services
                 _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
             }
 
-            public int SaveProducts(List<Product> parserProducts, string storeName = "NOVUS")
+            /// <summary>
+            /// Saves or updates the list of goods in the LiteDB database for the specified store
+            /// </summary>
+            /// <param name="parserProducts">List of parsing goods</param>
+            /// <param name="storeName">Store name, which get products</param>
+            /// <returns>Amount of goods</returns>
+            public int SaveProducts(List<Product> parserProducts, string storeName = "STORE")
             {
                 using var db = new LiteDatabase(_dbPath);
                 var stores = db.GetCollection<Store>("stores");
 
-                var store = stores.FindOne(x => x.Name == storeName);
+                /// Find existing store or create new one
+                var store = stores.FindOne(x => x.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
                 if (store == null)
                 {
                     store = new Store { Name = storeName };
                     stores.Insert(store);
                 }
 
+                /// Go through every product. If the category is not specified then non-category
                 foreach (var product in parserProducts)
                 {
                     var categoryName = product.Category ?? "non-category";
+
+                    /// Check if there is such a category in the store.
                     var category = store.Categories.FirstOrDefault(c => c.Name == categoryName);
                     if (category == null)
                     {
@@ -45,6 +57,7 @@ namespace SellCatcher.Api.Services
                         store.Categories.Add(category);
                     }
 
+                    /// If the product is already in the category (by name), update all fields
                     var alreadyExist = category.Products.FirstOrDefault(p => p.Name == product.Name);
                     if (alreadyExist != null)
                     {
@@ -52,14 +65,17 @@ namespace SellCatcher.Api.Services
                         alreadyExist.OldPrice = product.OldPrice;
                         alreadyExist.Discount = product.Discount;
                         alreadyExist.IsOnSale = product.IsOnSale;
-                        alreadyExist.ValidUntil = ParseDate(product.ValidUntil);
+                        alreadyExist.ValidUntil = product.ValidUntil;
+                        alreadyExist.IsBulk = product.IsBulk;
+                        alreadyExist.BulkPrice = product.BulkPrice;
                         alreadyExist.WhenUpdated = DateTime.Now;
                     }
                     else
                     {
                         int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
 
-                        category.Products.Add(new NOVUSProduct
+                        /// Good creation
+                        category.Products.Add(new Product
                         {
                             Id = nextId,
                             Name = product.Name,
@@ -67,8 +83,10 @@ namespace SellCatcher.Api.Services
                             OldPrice = product.OldPrice,
                             Discount = product.Discount,
                             IsOnSale = product.IsOnSale,
-                            ValidUntil = ParseDate(product.ValidUntil),
+                            ValidUntil = product.ValidUntil,
                             Category = categoryName,
+                            IsBulk = product.IsBulk,
+                            BulkPrice = product.BulkPrice,
                             WhenUpdated = DateTime.Now
                         });
                     }
@@ -102,51 +120,27 @@ namespace SellCatcher.Api.Services
             }
 
             // Get all products in specific category
-            public List<NOVUSProduct> GetProducts(string storeName, string categoryName)
+            public List<Product> GetProducts(string storeName, string categoryName)
             {
                 using var db = new LiteDatabase(_dbPath);
                 var store = db.GetCollection<Store>("stores").FindOne(x => x.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
                 var category = store?.Categories.FirstOrDefault(c => c.Name == categoryName);
-                return category?.Products ?? new List<NOVUSProduct>();
+                return category?.Products ?? new List<Product>();
             }
 
             // Get all discounts
-            public List<NOVUSProduct> GetOnSale(string storeName, string categoryName = null)
+            public List<Product> GetOnSale(string storeName, string categoryName = null)
             {
                 using var db = new LiteDatabase(_dbPath);
                 var store = db.GetCollection<Store>("stores").FindOne(x => x.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
 
                 if (store == null)
-                    return new List<NOVUSProduct>();
+                    return new List<Product>();
 
                 var allProducts = string.IsNullOrEmpty(categoryName) ? store.Categories.SelectMany(c => c.Products)
-                                  : store.Categories.FirstOrDefault(c => c.Name == categoryName)?.Products ?? new List<NOVUSProduct>();
+                                  : store.Categories.FirstOrDefault(c => c.Name == categoryName)?.Products ?? new List<Product>();
 
                 return allProducts.Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
-            }
-
-            private DateTime? ParseDate(string dateStr)
-            {
-                if (string.IsNullOrEmpty(dateStr))
-                    return null;
-
-                try
-                {
-                    var parts = dateStr.Split('.');
-                    if (parts.Length == 2 &&
-                        int.TryParse(parts[0], out int day) &&
-                        int.TryParse(parts[1], out int month))
-                    {
-                        var year = DateTime.Now.Year;
-                        var date = new DateTime(year, month, day);
-                        if (date < DateTime.Now)
-                            date = date.AddYears(1);
-                        return date;
-                    }
-                }
-                catch { }
-
-                return null;
             }
         }
     }

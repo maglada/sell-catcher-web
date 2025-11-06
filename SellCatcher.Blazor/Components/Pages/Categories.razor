@@ -1,7 +1,7 @@
 @page "/categories"
-<div class="search-bar-box">
-    <SearchBar />
-</div>
+@*Defines the route for this page in Blazor
+Custom component for searching products*@
+
 
 <div class="page-layout">
     <aside class="sidebar">
@@ -11,6 +11,7 @@
 
         <div>
             Країна<br />
+            @* Regular HTML checkboxes (not bound to C# yet) *@
             <input type="checkbox" name="contry" id="Moroko"> Мороко<br />
             <input type="checkbox" name="contry" id="Brazil"> Бразилія<br />
             <input type="checkbox" name="contry" id="Turkey"> Туреччина<br />
@@ -19,44 +20,50 @@
         </div>
 
         <div>
+            @* Price range displayed using C# variables *@
             <p>Ціна @MinPrice₴ - @MaxPrice₴</p>
+
+            @* Custom Blazor component that triggers an event when range changes *@
             <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
 
             <p></p>
         </div>
 
         <div>
-            Фасування
+            Фасування<br />
+            @* Just static checkboxes, not bound to C# yet *@
             <input type="checkbox" name="packaging" id="packeged"> Фасований<br />
             <input type="checkbox" name="packaging" id="gravimetric"> Грамовий
         </div>
 
         <div>
-
         </div>
 
         <div>
             <p>Магазин</p>
+            @* @bind automatically syncs C# variable with checkbox state *@
             <input type="checkbox" @bind="ShowATB" /> АТБ<br />
             <input type="checkbox" @bind="ShowNovus" /> Новус
         </div>
 
         <div>
         </div>
-
     </aside>
 
     <main class="content">
+        @* Passes filter values as parameters to ProductList component *@
         <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
     </main>
-
 </div>
+
 @code {
+    // Variables used for UI state (connected to inputs via @bind)
     private bool ShowATB = true;
     private bool ShowNovus = true;
     private int MinPrice = 0;
     private int MaxPrice = 100;
 
+    // Returns selected shops as a list of strings for filtering
     private List<string> GetSelectedShops()
     {
         var list = new List<string>();
@@ -65,8 +72,9 @@
         return list;
     }
 
+    // Called by PriceRangeSlider when user changes range
     private void OnRangeChangedPrice((int, int) range)
     {
-        (MinPrice, MaxPrice) = range;
+        (MinPrice, MaxPrice) = range; // Tuple deconstruction
     }
 }

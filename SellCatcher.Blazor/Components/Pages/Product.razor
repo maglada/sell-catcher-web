@@ -1,41 +1,40 @@
-@page "/product"
+@page "/product" // Defines the route for this page (shown at /product)
 
 <div class="product-sect">
 
     <div class="info-container">
         <div class="info-box">
-        <img src="/images/potato.jpg" alt="product-photo" class="product-photo"/>
+            <img src="/images/potato.jpg" alt="product-photo" class="product-photo" />
         </div>
 
         <div class="info-box">
             <p>@name</p>
+
             <fieldset class="sell-price">
-            <label>₴@Price</label>
+                <label>₴@Price</label>
             </fieldset>
+
             <p>₴@sellPrice</p>
 
             <button>Кошик</button>
-            
-
         </div>
-            
     </div>
 
 </div>
+
 <section class="categories">
     <div class="categories-row">
         <CategoryButtonProduct Title="АТБ" ImageUrl="images/potato.jpg" />
         <CategoryButtonProduct Title="Novus" ImageUrl="images/potato.jpg" />
         <CategoryButtonProduct Title="Сільпо" ImageUrl="images/potato.jpg" />
         <CategoryButtonProduct Title="Фора" ImageUrl="images/potato.jpg" />
-    </div >
+    </div>
 </section>
 
+@code {
+    [Parameter] public string ProductId { get; set; } // Can receive product ID from the route or query
 
-@code{
-    [Parameter] public string ProductId {get; set;}
-    string name = "Product";
-    float Price = 100;
-    float sellPrice = 50;
-
+    string name = "Product"; // Product title (temporary static value)
+    float Price = 100; // Regular price
+    float sellPrice = 50; // Discounted or sale price
 }
