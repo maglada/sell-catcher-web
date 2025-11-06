@@ -1,58 +1,84 @@
 .products-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 5%;
-    padding:0px 0 0 0;
-    max-height: 700px;
-    overflow-y: auto;
-    border: 2px solid #ffffff;
-    border-radius: 10px;
-    background: #ffffff;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 5%;
+  padding: 0px 0 0 0;
+  max-height: 700px;
+  overflow-y: auto;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  background: #ffffff;
 }
 
 .product-button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 30px;
-    background: #fff;
-    cursor: pointer;
-    transition: 0.2s ease;
-    width: 200px;
-    height: 250px;
-    -webkit-border-radius: 30px;
-    -moz-border-radius: 30px;
-    -ms-border-radius: 30px;
-    -o-border-radius: 30px;
-    -webkit-transition: 0.2s ease;
-    -moz-transition: 0.2s ease;
-    -ms-transition: 0.2s ease;
-    -o-transition: 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  background: #fff;
+  cursor: pointer;
+  transition: 0.2s ease;
+  width: 200px;
+  height: 250px;
+  -webkit-border-radius: 30px;
+  -moz-border-radius: 30px;
+  -ms-border-radius: 30px;
+  -o-border-radius: 30px;
+  -webkit-transition: 0.2s ease;
+  -moz-transition: 0.2s ease;
+  -ms-transition: 0.2s ease;
+  -o-transition: 0.2s ease;
 }
 
 .product-button:hover {
-    border-color: #0078d7;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  border-color: #0078d7;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .product-button img {
-    width: 150px;
-    height: 150px;
-    object-fit: contain;
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
 }
 
 .product-button .name {
-    font-size: 14px;
-    font-weight: 500;
-    text-align: center;
-    color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  color: #333;
 }
 
 .product-button .price {
-    font-size: 18px;
-    font-weight: 700;
-    color: #f08a00;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f08a00;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.pagination button {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.pagination button:hover:not([disabled]) {
+  background: #f2f2f2;
+}
+
+.pagination button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
