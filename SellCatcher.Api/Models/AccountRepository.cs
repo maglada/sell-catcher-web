@@ -10,9 +10,16 @@ namespace SellCatcher.Api.Models
     public class AccountRepository
     {
         private readonly string _dbPath;
+        private readonly ILiteCollection<Account> _col;
 
-        public AccountRepository()
+        public AccountRepository(string dbPath = "sellcatcher.db")
         {
+             _db = new LiteDatabase(dbPath);
+            _col = _db.GetCollection<Account>("accounts");
+            // Используем автоинкремент для Id
+            _col.EnsureIndex(x => x.Id);
+            _col.EnsureIndex(x => x.UserName, true);
+
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
             var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));

@@ -16,6 +16,8 @@ var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 var jwtLifetime = Environment.GetEnvironmentVariable("JWT_TOKEN_LIFETIME");
 var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 
+
+
 builder.Services.AddOpenApi();
 
 
@@ -24,6 +26,7 @@ builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<AuthSettings>();
 builder.Services.AddScoped<JWTService>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddAuth();
 builder.Services.AddScoped<AccountService>();
@@ -41,7 +44,42 @@ app.MapControllers();
 
 app.Run();
 
+namespace ProductScraperApp
+{
+    internal class Program
+    {
+        static async Task Main(string[] args)
+        {
+            var directory = args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "links");
 
+            var config = new ScraperConfig
+            {
+                Headless = true,
+                EnableLogging = true,
+                EnableDebugOutput = false,
+                SaveDebugScreenshots = false,
+                SaveErrorScreenshots = false,
+                SlowMo = 500
+            };
+
+            var factory = new ScraperFactory(config);
+
+            try
+            {
+                var results = await factory.ProcessAllFilesAsync(directory, "NovusLinks_*.txt");
+
+                foreach (var kvp in results)
+                {
+                    Console.WriteLine($"File: {kvp.Key} -> Products: {kvp.Value.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error: {ex}");
+            }
+        }
+    }
+}
 /// <summary>
 /// --------------Run Parser----------------
 /// </summary>
