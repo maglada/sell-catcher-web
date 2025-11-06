@@ -42,7 +42,7 @@ namespace SellCatcher.Api.Services
             return store.Categories.SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
         }
 
-        public Product? GetById(int id)
+        public Product? GetById(Guid id)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
@@ -60,23 +60,34 @@ namespace SellCatcher.Api.Services
             return null;
         }
 
-        public void Add(Product discount)
+        public void Add(string storeName, Product discount)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
+            var store = stores.FindOne(x => x.Name == storeName);
+            if (store == null)
+            {
+                store = new Store
+                {
+                    Name = storeName,
+                    Categories = new List<Category>()
+                };
+            }
 
-            var store = stores.FindOne(x => x.Name == "NOVUS") ?? new Store { Name = "NOVUS" };
-            var category = store.Categories.FirstOrDefault() ?? new Category { Name = "New Category" };
-
-            int nextId = store.Categories.SelectMany(c => c.Products).Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
-
-            discount.Id = nextId;
-            category.Products.Add(discount);
-
-            if (!store.Categories.Any())
+            var category = store.Categories.FirstOrDefault(c => c.Name == discount.Category);
+            if (category == null)
+            {
+                category = new Category
+                {
+                    Name = discount.Category,
+                    Products = new List<Product>()
+                };
                 store.Categories.Add(category);
-
-            stores.Update(store);
+            }
+            category.Products ??= new List<Product>();
+            discount.Id = Guid.NewGuid(); 
+            category.Products.Add(discount);
+            stores.Upsert(store);
         }
     }
 }

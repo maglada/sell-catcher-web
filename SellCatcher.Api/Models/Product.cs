@@ -10,7 +10,7 @@ namespace ProductScraper
     public class Product
     {
         [BsonId]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();  
         public string Name { get; set; }
         public decimal Price { get; set; }
         public decimal? OldPrice { get; set; }
