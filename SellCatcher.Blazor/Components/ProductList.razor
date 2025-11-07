@@ -22,16 +22,17 @@
             </button>
         }
 
-        <div class="pagination">
-            <button @onclick="PrevPage" disabled="@(Page == 1)">« Назад</button>
-            <span>Сторінка @Page із @TotalPages</span>
-            <button @onclick="NextPage" disabled="@(Page == TotalPages)">Далі »</button>
-        </div>
+
     }
     else
     {
         <p>Немає продуктів за вибраними фільтрами.</p>
     }
+    <div class="pagination">
+        <button @onclick="PrevPage" disabled="@(Page == 1)">« Назад</button>
+        <span>Сторінка @Page із @TotalPages</span>
+        <button @onclick="NextPage" disabled="@(Page == TotalPages)">Далі »</button>
+    </div>
 </div>
 
 @code {
@@ -47,7 +48,7 @@
 
     // Пагінація
     private int Page = 1;
-    private int PageSize = 9;
+    private int PageSize = 16;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredProducts.Count / PageSize));
 
     // Завантаження/помилки
