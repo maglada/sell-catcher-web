@@ -9,9 +9,9 @@ namespace SellCatcher.Api.Models
     public class RefreshToken
     {
         [BsonId]
-        public string Token { get; set; } = "";
+        public string Token { get; set; } = string.Empty;
 
-        public int AccountId { get; set; }
+        public Guid AccountId { get; set; }
         public DateTime ExpiresAt { get; set; }
         public bool Revoked { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
