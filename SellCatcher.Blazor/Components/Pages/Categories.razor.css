@@ -35,3 +35,9 @@
 div {
   padding: 5px;
 }
+
+.inputPrice{
+  border:none;
+  background-color: none;
+  width:7vh;
+}

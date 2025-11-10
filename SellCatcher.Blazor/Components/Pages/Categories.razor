@@ -16,7 +16,16 @@
         </div>
 
         <div>
-            <p><strong>Ціна</strong> @MinPrice₴ – @MaxPrice₴</p>
+            <p>
+                <strong>Ціна</strong>
+
+                <input class="inputPrice" type="number" placeholder=@MinPrice @bind="MinPrice" @bind:event="oninput" />
+
+                <span>–</span>
+
+                <input class="inputPrice" type="number" placeholder=@MaxPrice @bind="MaxPrice" @bind:event="oninput" />
+            </p>
+
             <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
         </div>
 
@@ -34,6 +43,7 @@
     </aside>
 
     <main class="content">
+        @* Якщо ProductList очікує int, змінюй його на int? або підставляй дефолти *@
         <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
     </main>
 </div>
@@ -41,8 +51,10 @@
 @code {
     private bool ShowATB = true;
     private bool ShowNovus = true;
-    private int MinPrice = 0;
-    private int MaxPrice = 100;
+
+    // Змінили на nullable, щоб працювали placeholder і oninput під час набору
+    private int MinPrice { get; set; } = 100;
+    private int MaxPrice { get; set; } = 1000;
 
     private void OnRangeChangedPrice((int min, int max) range)
     {

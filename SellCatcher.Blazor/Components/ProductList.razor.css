@@ -30,6 +30,7 @@
   border-radius: 30px;
   background: #fff;
   cursor: pointer;
+  text-decoration: none;
   transition: 0.2s ease;
   width: 200px;
   height: 250px;

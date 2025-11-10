@@ -10,12 +10,12 @@
         </div>
 
         <div class="info-box">
-            <p>@name</p>
+            <p style="font-weight:700; ">@name</p>
             <fieldset class="sell-price">
                 <label>₴@Price</label>
             </fieldset>
 
-            <p>₴@sellPrice</p>
+            <p class="price">від ₴@MinSellPrice - ₴@MaxSellPrice</p>
 
             <button class="green-button"><img src="icons/shopping-cart.svg" /> В кошик</button>
         </div>
@@ -35,9 +35,10 @@
 @code {
     [Parameter] public string ProductId { get; set; }
 
-    
+
 
     string name = "Product";
     float Price = 100;
-    float sellPrice = 50;
+    float MinSellPrice = 50;
+    float MaxSellPrice = 50 + 10;
 }

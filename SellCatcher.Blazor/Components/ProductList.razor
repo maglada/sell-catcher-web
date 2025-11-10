@@ -15,11 +15,11 @@
     {
         @foreach (var product in PagedProducts)
         {
-            <button class="product-button">
-                <img src="@product.ImageUrl" alt="@product.Name" />
-                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
+            <a class="product-button" href="/product/@product.Id">
+                <img src="@product.ImageUrl" alt="@product.Name" style="margin:10px; text-elign:center;" />
+                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span><br />
                 <span class="name">@product.Name</span>
-            </button>
+            </a>
         }
 
 
@@ -42,6 +42,7 @@
     [Parameter] public IEnumerable<string> FilteredShops { get; set; } = Array.Empty<string>();
 
     // Дані
+    private string ProductID { get; set; }
     private List<Product> Products = new();
     private List<Product> FilteredProducts = new();
     private List<Product> PagedProducts = new();
@@ -83,6 +84,7 @@
             await Task.Delay(200);
             for (int i = 1; i <= 42; i++)
             {
+
                 Products.Add(new Product
                 {
                     Id = i,
