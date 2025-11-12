@@ -1,5 +1,6 @@
 @using System.Globalization
 @using System.Net.Http.Json
+@using System.Text.Json.Serialization
 @inject HttpClient Http
 
 <div class="products-container">
@@ -15,10 +16,42 @@
     {
         @foreach (var product in PagedProducts)
         {
-            <button class="product-button">
-                <img src="@product.ImageUrl" alt="@product.Name" />
-                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
-                <span class="name">@product.Name</span>
+            <button class="product-button" title="@product.Name">
+                <div class="thumb">
+                    <img src="@product.ImageUrlOrPlaceholder" alt="@product.Name" loading="lazy" />
+                    @if (product.IsOnSale && !string.IsNullOrWhiteSpace(product.Discount))
+                    {
+                        <span class="badge">@product.Discount</span>
+                    }
+                </div>
+
+                <div class="meta">
+                    <span class="name">@product.Name</span>
+
+                    <div class="prices">
+                        <span class="price-now">
+                            @product.Price.ToString("C", new CultureInfo("uk-UA"))
+                        </span>
+
+                        @if (product.OldPrice.HasValue && product.OldPrice.Value > product.Price)
+                        {
+                            <span class="price-old">
+                                @product.OldPrice.Value.ToString("C", new CultureInfo("uk-UA"))
+                            </span>
+                        }
+                    </div>
+
+                    <div class="row-small">
+                        <span class="shop">@product.Shop</span>
+
+                        @if (product.ValidUntil.HasValue)
+                        {
+                            <span class="until">
+                                до @product.ValidUntil.Value.ToString("dd.MM.yyyy")
+                            </span>
+                        }
+                    </div>
+                </div>
             </button>
         }
 
@@ -54,14 +87,12 @@
     private bool isLoading = true;
     private string? loadError;
 
-    // 1) Перший запуск: тягнемо дані
     protected override async Task OnInitializedAsync()
     {
         await LoadProductsAsync();
         ApplyFilters();
     }
 
-    // 2) Будь-яка зміна параметрів з батька — перерахувати фільтри
     protected override void OnParametersSet()
     {
         if (!isLoading)
@@ -75,22 +106,10 @@
             isLoading = true;
             loadError = null;
 
-            // Коли буде API:
-            // Products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
+            // ⚠️ ВАЖЛИВО: у Program.cs Blazor має бути правильний BaseAddress на API (http://localhost:5062/ якщо в тебе HTTP)
+            // Напр.: builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5062/") });
 
-            // Поки — мокові дані:
-            await Task.Delay(200);
-            for (int i = 1; i <= 42; i++)
-            {
-                Products.Add(new Product
-                {
-                    Id = i,
-                    Name = $"Product {i}",
-                    Price = 10 + i,
-                    ImageUrl = "/images/potato.jpg",
-                    Shop = (i % 2 == 0) ? "Новус" : "АТБ"
-                });
-            }
+            Products = await Http.GetFromJsonAsync<List<Product>>("api/discounts") ?? new();
         }
         catch (Exception ex)
         {
@@ -105,12 +124,16 @@
     // Застосування фільтрів + скидання на 1 сторінку
     private void ApplyFilters()
     {
-        var shops = (FilteredShops ?? Array.Empty<string>()).ToHashSet();
+        var shops = (FilteredShops ?? Array.Empty<string>())
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Select(s => s.Trim())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         FilteredProducts = Products
         .Where(p => p.Price >= FilteredPriceMin &&
         p.Price <= FilteredPriceMax &&
         (shops.Count == 0 || shops.Contains(p.Shop)))
+        .OrderBy(p => p.Name) // або за ціною/датою
         .ToList();
 
         Page = 1;
@@ -144,12 +167,59 @@
         }
     }
 
-    public class Product
+    // === МОДЕЛЬ, що відповідає твоєму JSON ===
+    public sealed class Product
     {
-        public int Id { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+
+        [JsonPropertyName("name")]
         public string Name { get; set; } = "";
+
+        [JsonPropertyName("price")]
         public decimal Price { get; set; }
-        public string ImageUrl { get; set; } = "";
-        public string Shop { get; set; } = "";
+
+        [JsonPropertyName("oldPrice")]
+        public decimal? OldPrice { get; set; }
+
+        [JsonPropertyName("discount")]
+        public string? Discount { get; set; }
+
+        [JsonPropertyName("validUntil")]
+        public DateTimeOffset? ValidUntil { get; set; }
+
+        [JsonPropertyName("isOnSale")]
+        public bool IsOnSale { get; set; }
+
+        [JsonPropertyName("bulkPrice")]
+        public decimal? BulkPrice { get; set; }
+
+        [JsonPropertyName("isBulk")]
+        public bool IsBulk { get; set; }
+
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+
+        [JsonPropertyName("whenUpdated")]
+        public DateTimeOffset? WhenUpdated { get; set; }
+
+        // У JSON немає картинки — зробимо поле-обчислення з плейсхолдером
+        [JsonIgnore]
+        public string ImageUrlOrPlaceholder => "/images/placeholder.png";
+
+        // Магазин беремо з префіксу категорії "SilpoLinks_fish" -> "Silpo"
+        [JsonIgnore]
+        public string Shop
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Category)) return "Невідомо";
+                var idx = Category.IndexOf("Links_", StringComparison.OrdinalIgnoreCase);
+                if (idx > 0) return Category.Substring(0, idx);
+                // запасний варіант: відкинути все після '_'
+                var under = Category.IndexOf('_');
+                return under > 0 ? Category.Substring(0, under) : Category;
+            }
+        }
     }
 }
