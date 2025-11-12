@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
+using ProductScraper;
 
 namespace SellCatcher.Api.Controllers
 
@@ -33,20 +34,13 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpGet("{id}")] /*Эндпоинт получения скидки по ID*/
-        public IActionResult GetById(int id)
+        public IActionResult GetById(Guid id)
         {
             var discount = _discountService.GetById(id);
             if (discount == null) return NotFound();
             return Ok(discount);
         }
 
-        [HttpPost] /*Эндпоинт добавления новой скидки*/
-        public IActionResult Add([FromBody] NOVUSProduct discount)
-        {
-            if (discount == null) return NotFound();
-            _discountService.Add(discount);
-            return CreatedAtAction(nameof(GetById), new { id = discount.Id }, discount);
-        }
         [HttpGet("active")] /*Эндпоинт получения активных скидок*/
         public IActionResult GetActiveDiscounts()
         {
@@ -68,8 +62,8 @@ namespace SellCatcher.Api.Controllers
         {
             var topDeals = _discountService
                 .GetAll()
-                .OrderByDescending(d => d.OldPrice - d.NewPrice)
-                .Take(3); 
+                .OrderByDescending(d => d.OldPrice - d.Price)
+                .Take(3);
             return Ok(topDeals);
         }
     }

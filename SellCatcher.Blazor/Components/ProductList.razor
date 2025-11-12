@@ -1,5 +1,6 @@
 @using System.Globalization
 @using System.Net.Http.Json
+@using System.Text.Json.Serialization
 @inject HttpClient Http
 
 <div class="products-container">
@@ -15,9 +16,15 @@
     {
         @foreach (var product in PagedProducts)
         {
+<<<<<<< HEAD
             <a class="product-button" href="/product/@product.Id">
                 <img src="@product.ImageUrl" alt="@product.Name" style="margin:10px; text-elign:center;" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span><br />
+=======
+            <button class="product-button">
+                <img src="@product.TimeImage" alt="@product.Name" />
+                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
+>>>>>>> connect-api
                 <span class="name">@product.Name</span>
             </a>
         }
@@ -56,14 +63,12 @@
     private bool isLoading = true;
     private string? loadError;
 
-    // 1) Перший запуск: тягнемо дані
     protected override async Task OnInitializedAsync()
     {
         await LoadProductsAsync();
         ApplyFilters();
     }
 
-    // 2) Будь-яка зміна параметрів з батька — перерахувати фільтри
     protected override void OnParametersSet()
     {
         if (!isLoading)
@@ -77,6 +82,7 @@
             isLoading = true;
             loadError = null;
 
+<<<<<<< HEAD
             // Коли буде API:
             // Products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
 
@@ -94,6 +100,9 @@
                     Shop = (i % 2 == 0) ? "Новус" : "АТБ"
                 });
             }
+=======
+            Products = await Http.GetFromJsonAsync<List<Product>>("api/discounts") ?? new();
+>>>>>>> connect-api
         }
         catch (Exception ex)
         {
@@ -105,21 +114,24 @@
         }
     }
 
-    // Застосування фільтрів + скидання на 1 сторінку
     private void ApplyFilters()
     {
-        var shops = (FilteredShops ?? Array.Empty<string>()).ToHashSet();
+        var shops = (FilteredShops ?? Array.Empty<string>())
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Select(s => s.Trim())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         FilteredProducts = Products
         .Where(p => p.Price >= FilteredPriceMin &&
-        p.Price <= FilteredPriceMax &&
-        (shops.Count == 0 || shops.Contains(p.Shop)))
+        p.Price <= FilteredPriceMax)
+        .OrderBy(p => p.Name)
         .ToList();
 
         Page = 1;
         UpdatePagedProducts();
     }
-
+    @*&&
+        (shops.Count == 0 || shops.Contains(p.Shop)))*@
     private void UpdatePagedProducts()
     {
         PagedProducts = FilteredProducts
@@ -147,12 +159,44 @@
         }
     }
 
-    public class Product
+    public sealed class Product
     {
-        public int Id { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+
+        [JsonPropertyName("name")]
         public string Name { get; set; } = "";
+
+        [JsonPropertyName("price")]
         public decimal Price { get; set; }
-        public string ImageUrl { get; set; } = "";
-        public string Shop { get; set; } = "";
+
+        [JsonPropertyName("oldPrice")]
+        public decimal? OldPrice { get; set; }
+
+        [JsonPropertyName("discount")]
+        public string? Discount { get; set; }
+
+        [JsonPropertyName("validUntil")]
+        public DateTimeOffset? ValidUntil { get; set; }
+
+        [JsonPropertyName("isOnSale")]
+        public bool IsOnSale { get; set; }
+
+        [JsonPropertyName("bulkPrice")]
+        public decimal? BulkPrice { get; set; }
+
+        [JsonPropertyName("isBulk")]
+        public bool IsBulk { get; set; }
+
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+
+        [JsonPropertyName("whenUpdated")]
+        public DateTimeOffset? WhenUpdated { get; set; }
+
+        [JsonPropertyName("SourceImg")]
+        public string SourceImg { get; set; } = "";
+
+        public string TimeImage { get; set; } = "images/potato.jpg";
     }
 }

@@ -9,6 +9,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+/***
+При помилці шляху бази даних потрібно змінити шлях в AccountRepository.cs
+private readonly string _dbPath;
+
+        public AccountRepository()
+        {
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+
+            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
+        }
+
+***/
 
 namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
 {
@@ -21,19 +35,13 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
         [SetUp]
         public void Setup()
         {
+            // Встановлюємо JWT секретний ключ для тестів
+            Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "this-is-a-test-secret-key-with-at-least-32-characters-long");
+
+            // Ініціалізуємо сервіси
             accountRepository = new AccountRepository();
-            // Створюємо налаштування для JWT(Частина написана клудом фактично створюємо фейк токен)
-            var authSettings = new AuthSettings
-            {
-                SecretKey = "ThisIsAVerySecretKeyForTestingPurposesOnly12345", // мінімум 32 символи
-                TokenLifetime = TimeSpan.FromHours(1)
-            };
-
-            var options = Options.Create(authSettings);
-            jwtService = new JWTService(options);
-
+            jwtService = new JWTService();
             accountService = new AccountService(accountRepository, jwtService);
-
         }
 
 
@@ -139,40 +147,5 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
             Assert.That(registeredAccount.LastName, Is.EqualTo(lastName), "Last names should match");
             Assert.That(registeredAccount.PasswordHash, Is.Not.Null.Or.Empty, "Password hash should not be null or empty");
         }
-
-
-        /***
-        [Test]
-        public void Registration_WithTheSameUsername_ThrowsError()
-        {
-            //arrange
-            string expectedUsername = "user";
-            string password = "password";
-            
-            
-            string sameUsername = "user";
-            string samePassword = "password";
-            string firstName = "New";
-            string lastName = "User";
-
-            Account testAccount = new Account
-            {
-                UserName = expectedUsername,
-                FirstName = "Test",
-                LastName = "User"
-            };
-
-            var passwordHasher = new PasswordHasher<Account>();
-            testAccount.PasswordHash = passwordHasher.HashPassword(testAccount, password);
-
-            accountRepository.Add(testAccount);
-            //act
-            
-            var ex = Assert.Throws<Exception>(() => accountService.Register(sameUsername, firstName, lastName, samePassword));
-
-            // Assert
-            Assert.That(ex.Message, Is.EqualTo("Username already exists"));
-        }
-        ***/
     }
 }
