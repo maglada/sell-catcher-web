@@ -68,6 +68,8 @@ namespace SellCatcher.Api.Services
                         alreadyExist.ValidUntil = product.ValidUntil;
                         alreadyExist.IsBulk = product.IsBulk;
                         alreadyExist.BulkPrice = product.BulkPrice;
+                        alreadyExist.ImageUrl = product.ImageUrl;
+                        alreadyExist.SourceImg = product.SourceImg;
                         alreadyExist.WhenUpdated = DateTime.Now;
                     }
                     else
@@ -85,6 +87,8 @@ namespace SellCatcher.Api.Services
                             Category = categoryName,
                             IsBulk = product.IsBulk,
                             BulkPrice = product.BulkPrice,
+                            ImageUrl = product.ImageUrl,
+                            SourceImg = product.SourceImg,
                             WhenUpdated = DateTime.Now
                         });
                     }

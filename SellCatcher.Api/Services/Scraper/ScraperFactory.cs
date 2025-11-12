@@ -22,22 +22,22 @@ namespace ProductScraper
             // The string parameter is the category name that will be assigned to products
             _scraperMap = new Dictionary<string, Func<ScraperConfig, string, IProductScraper>>(StringComparer.OrdinalIgnoreCase)
             {
-                { "NovusLinks_fish", (cfg, cat) => new NovusProductScraper(cfg, cat) },
-                { "NovusLinks_alcohol", (cfg, cat) => new NovusProductScraperAlc(cfg, cat) },
-                { "NovusLinks_eggs", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_meat", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_bakery", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_halfmade", (cfg, cat) => new ProductScraperBread(cfg, cat) },
-                { "NovusLinks_veg_fruit", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_fish", (cfg, cat) => new NovusProductScraper(cfg, cat) },
+                //{ "NovusLinks_alcohol", (cfg, cat) => new NovusProductScraperAlc(cfg, cat) },
+                //{ "NovusLinks_eggs", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_meat", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_bakery", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_halfmade", (cfg, cat) => new ProductScraperBread(cfg, cat) },
+                //{ "NovusLinks_veg_fruit", (cfg, cat) => new ProductScraperBread(cfg, cat) },
 
                 // Silpo: generic entry — file names like "SilpoLinks.txt" or "SilpoLinks_veg.txt"
                 { "SilpoLinks_veg_fruit", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_cig", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_egg", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_fish", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_bread", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_meat", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
-                { "SilpoLinks_halfmade", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_cig", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_egg", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_fish", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_bread", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_meat", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
+                //{ "SilpoLinks_halfmade", (cfg, cat) => new SilpoProductScraper(cfg, cat) },
 
                 // Add more mappings here as needed for each category
             };
