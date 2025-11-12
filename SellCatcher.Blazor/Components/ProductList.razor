@@ -16,15 +16,9 @@
     {
         @foreach (var product in PagedProducts)
         {
-<<<<<<< HEAD
-            <a class="product-button" href="/product/@product.Id">
-                <img src="@product.ImageUrl" alt="@product.Name" style="margin:10px; text-elign:center;" />
-                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span><br />
-=======
-            <button class="product-button">
-                <img src="@product.TimeImage" alt="@product.Name" />
+            <a class="product-button">
+                <img src="@product.imageUrl" alt="@product.Name" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
->>>>>>> connect-api
                 <span class="name">@product.Name</span>
             </a>
         }
@@ -82,12 +76,10 @@
             isLoading = true;
             loadError = null;
 
-<<<<<<< HEAD
             // Коли буде API:
-            // Products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
 
             // Поки — мокові дані:
-            await Task.Delay(200);
+            @* await Task.Delay(200);
             for (int i = 1; i <= 42; i++)
             {
 
@@ -99,10 +91,8 @@
                     ImageUrl = "/images/potato.jpg",
                     Shop = (i % 2 == 0) ? "Новус" : "АТБ"
                 });
-            }
-=======
+            } *@
             Products = await Http.GetFromJsonAsync<List<Product>>("api/discounts") ?? new();
->>>>>>> connect-api
         }
         catch (Exception ex)
         {
@@ -194,8 +184,8 @@
         [JsonPropertyName("whenUpdated")]
         public DateTimeOffset? WhenUpdated { get; set; }
 
-        [JsonPropertyName("SourceImg")]
-        public string SourceImg { get; set; } = "";
+        [JsonPropertyName("imageUrl")]
+        public string imageUrl { get; set; } = "";
 
         public string TimeImage { get; set; } = "images/potato.jpg";
     }

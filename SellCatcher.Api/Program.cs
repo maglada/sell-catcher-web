@@ -1,4 +1,4 @@
-using DotNetEnv;
+﻿using DotNetEnv;
 using Microsoft.OpenApi.Models;
 using ProductScraper;
 using SellCatcher.Api.DTOs;
