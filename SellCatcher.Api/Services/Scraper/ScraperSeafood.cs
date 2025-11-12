@@ -197,11 +197,23 @@ namespace ProductScraper
 
                     prod.ValidUntil = trueValidUntil;
 
+                    /// Extract img
+                    var img = await el.QuerySelectorAsync("img[src]");
+
+                    string? imgUrl = "";
+                    //if (img is not null)
+                    //{
+                    //    imgUrl = await img.GetAttributeAsync("src");
+                    //}
+                    prod.SourceImg = imgUrl ?? "";
+
                     if (!string.IsNullOrWhiteSpace(prod.Name))
                     {
                         products.Add(prod);
 
                         Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
+
+                        Console.WriteLine($"Source: {prod.SourceImg}");
 
                         if (prod.IsBulk)
                             Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");

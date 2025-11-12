@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Playwright;
 using System;
 using System.Collections.Generic;
@@ -172,7 +173,7 @@ namespace ProductScraper
                     /// Extract discount period
                     string validUntil = "";
 
-                    var validUntilSel = await el.QuerySelectorAsync("[data-marker='Promotion_until_date']");
+                    var validUntilSel = await el.QuerySelectorAsync("[data-marker='Promotion_until_date'] ");
                     if (validUntilSel != null)
                     {
                         validUntil = (await validUntilSel.InnerTextAsync())?
@@ -197,11 +198,24 @@ namespace ProductScraper
 
                     prod.ValidUntil = trueValidUntil;
 
+                    /// Extract img
+                    var img = await el.QuerySelectorAsync("img");
+
+                    string? imgUrl = null;
+                    if (img is not null)
+                    {
+                        imgUrl = await img.GetAttributeAsync("src");
+                    }
+
+                    prod.SourceImg = imgUrl ?? "";
+
                     if (!string.IsNullOrWhiteSpace(prod.Name))
                     {
                         products.Add(prod);
 
                         Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
+
+                        Console.WriteLine($"Source: {prod.SourceImg}");
 
                         if (prod.IsBulk)
                             Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");

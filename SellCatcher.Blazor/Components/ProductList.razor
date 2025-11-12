@@ -16,42 +16,10 @@
     {
         @foreach (var product in PagedProducts)
         {
-            <button class="product-button" title="@product.Name">
-                <div class="thumb">
-                    <img src="@product.ImageUrlOrPlaceholder" alt="@product.Name" loading="lazy" />
-                    @if (product.IsOnSale && !string.IsNullOrWhiteSpace(product.Discount))
-                    {
-                        <span class="badge">@product.Discount</span>
-                    }
-                </div>
-
-                <div class="meta">
-                    <span class="name">@product.Name</span>
-
-                    <div class="prices">
-                        <span class="price-now">
-                            @product.Price.ToString("C", new CultureInfo("uk-UA"))
-                        </span>
-
-                        @if (product.OldPrice.HasValue && product.OldPrice.Value > product.Price)
-                        {
-                            <span class="price-old">
-                                @product.OldPrice.Value.ToString("C", new CultureInfo("uk-UA"))
-                            </span>
-                        }
-                    </div>
-
-                    <div class="row-small">
-                        <span class="shop">@product.Shop</span>
-
-                        @if (product.ValidUntil.HasValue)
-                        {
-                            <span class="until">
-                                до @product.ValidUntil.Value.ToString("dd.MM.yyyy")
-                            </span>
-                        }
-                    </div>
-                </div>
+            <button class="product-button">
+                <img src="@product.TimeImage" alt="@product.Name" />
+                <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
+                <span class="name">@product.Name</span>
             </button>
         }
 
@@ -106,9 +74,6 @@
             isLoading = true;
             loadError = null;
 
-            // ⚠️ ВАЖЛИВО: у Program.cs Blazor має бути правильний BaseAddress на API (http://localhost:5062/ якщо в тебе HTTP)
-            // Напр.: builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5062/") });
-
             Products = await Http.GetFromJsonAsync<List<Product>>("api/discounts") ?? new();
         }
         catch (Exception ex)
@@ -121,7 +86,6 @@
         }
     }
 
-    // Застосування фільтрів + скидання на 1 сторінку
     private void ApplyFilters()
     {
         var shops = (FilteredShops ?? Array.Empty<string>())
@@ -131,15 +95,15 @@
 
         FilteredProducts = Products
         .Where(p => p.Price >= FilteredPriceMin &&
-        p.Price <= FilteredPriceMax &&
-        (shops.Count == 0 || shops.Contains(p.Shop)))
-        .OrderBy(p => p.Name) // або за ціною/датою
+        p.Price <= FilteredPriceMax)
+        .OrderBy(p => p.Name)
         .ToList();
 
         Page = 1;
         UpdatePagedProducts();
     }
-
+    @*&&
+        (shops.Count == 0 || shops.Contains(p.Shop)))*@
     private void UpdatePagedProducts()
     {
         PagedProducts = FilteredProducts
@@ -167,7 +131,6 @@
         }
     }
 
-    // === МОДЕЛЬ, що відповідає твоєму JSON ===
     public sealed class Product
     {
         [JsonPropertyName("id")]
@@ -203,23 +166,9 @@
         [JsonPropertyName("whenUpdated")]
         public DateTimeOffset? WhenUpdated { get; set; }
 
-        // У JSON немає картинки — зробимо поле-обчислення з плейсхолдером
-        [JsonIgnore]
-        public string ImageUrlOrPlaceholder => "/images/placeholder.png";
+        [JsonPropertyName("SourceImg")]
+        public string SourceImg { get; set; } = "";
 
-        // Магазин беремо з префіксу категорії "SilpoLinks_fish" -> "Silpo"
-        [JsonIgnore]
-        public string Shop
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(Category)) return "Невідомо";
-                var idx = Category.IndexOf("Links_", StringComparison.OrdinalIgnoreCase);
-                if (idx > 0) return Category.Substring(0, idx);
-                // запасний варіант: відкинути все після '_'
-                var under = Category.IndexOf('_');
-                return under > 0 ? Category.Substring(0, under) : Category;
-            }
-        }
+        public string TimeImage { get; set; } = "images/potato.jpg";
     }
 }

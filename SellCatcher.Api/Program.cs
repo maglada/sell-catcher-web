@@ -27,10 +27,10 @@ builder.Services.AddScoped<JWTService>();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddAuth();
 builder.Services.AddCors(o => o.AddPolicy("LocalDev", p =>
-    p.WithOrigins("http://localhost:5182")
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .AllowCredentials()));
+  p.WithOrigins("http://localhost:5182")
+  .AllowAnyHeader()
+  .AllowAnyMethod()
+  .AllowCredentials()));
 builder.Services.AddScoped<AccountService>();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
