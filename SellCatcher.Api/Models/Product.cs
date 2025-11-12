@@ -19,6 +19,7 @@ namespace ProductScraper
         public bool IsOnSale { get; set; }
         public decimal? BulkPrice { get; set; } = null;
         public bool IsBulk { get; set; } = false;
+        public string SourceImg { get; set; }
         public string Category { get; set; }
         public DateTime WhenUpdated { get; set; } = DateTime.Now; // this is to know when the price has changed
     }
