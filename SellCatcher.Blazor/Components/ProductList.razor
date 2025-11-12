@@ -17,7 +17,7 @@
         @foreach (var product in PagedProducts)
         {
             <button class="product-button">
-                <img src="@product.TimeImage" alt="@product.Name" />
+                <img src="@product.imageUrl" alt="@product.Name" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
                 <span class="name">@product.Name</span>
             </button>
@@ -166,8 +166,8 @@
         [JsonPropertyName("whenUpdated")]
         public DateTimeOffset? WhenUpdated { get; set; }
 
-        [JsonPropertyName("SourceImg")]
-        public string SourceImg { get; set; } = "";
+        [JsonPropertyName("imageUrl")]
+        public string imageUrl { get; set; } = "";
 
         public string TimeImage { get; set; } = "images/potato.jpg";
     }
