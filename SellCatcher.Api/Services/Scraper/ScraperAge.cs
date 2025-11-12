@@ -206,7 +206,7 @@ namespace ProductScraper
                         imgUrl = await img.GetAttributeAsync("src");
                     }
 
-                    prod.SourceImg = imgUrl ?? "";
+                    prod.ImageUrl = imgUrl ?? "";
 
                     if (!string.IsNullOrWhiteSpace(prod.Name))
                     {
@@ -214,7 +214,7 @@ namespace ProductScraper
 
                         Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
 
-                        Console.WriteLine($"Source: {prod.SourceImg}");
+                        Console.WriteLine($"Source: {prod.ImageUrl}");
 
                         if (prod.IsBulk)
                             Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");

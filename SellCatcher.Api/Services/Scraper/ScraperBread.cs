@@ -199,15 +199,15 @@ namespace ProductScraper
                     prod.ValidUntil = trueValidUntil;
 
                     /// Extract img
-                    var img = await el.QuerySelectorAsync("img");
+                    var img = await el.QuerySelectorAsync("div[class*='jsx-12c0bb202e78d6b5 ProductTile__imageContainer'] img");
 
                     string? imgUrl = null;
                     if (img is not null)
                     {
-                        imgUrl = await img.GetAttributeAsync("src");
+                        imgUrl = await img.GetAttributeAsync("src") ?? await img.GetAttributeAsync("data-src");
                     }
 
-                    prod.SourceImg = imgUrl ?? "";
+                    prod.ImageUrl = imgUrl ?? "";
 
                     if (!string.IsNullOrWhiteSpace(prod.Name))
                     {
@@ -215,7 +215,7 @@ namespace ProductScraper
 
                         Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
 
-                        Console.WriteLine($"Source: {prod.SourceImg}");
+                        Console.WriteLine($"Source: {prod.ImageUrl}");
 
                         if (prod.IsBulk)
                             Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");
