@@ -1,4 +1,4 @@
-@page "/profile" // Defines the route for this page
+@page "/profile"
 
 <div class="profile">
     <h2>Мої дані</h2>
@@ -14,11 +14,11 @@
 
             <div>
                 <p prof-text>П.І.Б:</p>
-                @if (isEditing) // If editing mode is ON, show input
+                @if (isEditing)
                 {
                     <input @bind="User.FullName" />
                 }
-                else // Otherwise, show plain text
+                else
                 {
                     <span>@User.FullName</span>
                 }
@@ -29,12 +29,10 @@
                 @if (isEditing)
                 {
                     <input type="date" @bind="User.BirthDate" />
-                    // Date picker input
                 }
                 else
                 {
                     <span>@User.BirthDate.ToShortDateString()</span>
-                    // Display short date format
                 }
             </div><br />
 
@@ -64,12 +62,10 @@
                 @if (isEditing)
                 {
                     <input @bind="User.Email" />
-                    // Editable field in edit mode
                 }
                 else
                 {
                     <span>@User.Email</span>
-                    // Static text otherwise
                 }
             </div><br />
 
@@ -78,7 +74,6 @@
                 @if (isEditing)
                 {
                     <input @bind="User.Password" />
-                    // Not masked yet, just raw text input
                 }
                 else
                 {
@@ -102,11 +97,11 @@
 </div>
 
 @code {
-    private bool isEditing = false; // Tracks edit mode
-    private string buttonText = "Змінити"; // Not used yet, could show button label
-    private string iconSrc = "icons/pencil.svg"; // Changes icon when toggling edit mode
+    private bool isEditing = false;
+    private string buttonText = "Змінити";
+    private string iconSrc = "icons/pencil.svg";
 
-    private UserInfo User = new UserInfo // Default user data
+    private UserInfo User = new UserInfo
     {
         FullName = "Прізвище Ім'я По-батькові",
         BirthDate = DateTime.Now,
@@ -116,11 +111,11 @@
         Password = "12345678a"
     };
 
-    private void ToggleEdit() // Called when edit button is clicked
+    private void ToggleEdit()
     {
-        isEditing = !isEditing; // Switch between view/edit mode
-        buttonText = isEditing ? "Зберегти" : "Змінити"; // Update button label
-        iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg"; // Change icon
+        isEditing = !isEditing;
+        buttonText = isEditing ? "Зберегти" : "Змінити";
+        iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg";
     }
 
     // Class representing user profile data

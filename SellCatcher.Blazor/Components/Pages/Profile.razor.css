@@ -61,5 +61,7 @@ p[prof-text] {
   background-color: #000000;
 }
 
-input {
+input, option, select{
+  border:1px solid #2e2e2e3d;
+  border-radius: 10px;
 }
