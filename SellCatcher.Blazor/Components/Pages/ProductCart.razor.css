@@ -24,10 +24,12 @@
 
 
 .sell-price{
+    color:black;
+    text-decoration:line-through;
     text-align: center;
-    width: 40px;
+    padding:5px;
     background-color: lightgrey;
-    border-radius: 10px;
+    border-radius: 2vh;
 }
 
 .info-container {
