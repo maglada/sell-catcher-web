@@ -16,8 +16,8 @@
     {
         @foreach (var product in PagedProducts)
         {
-            <a class="product-button">
-                <img src="@product.imageUrl" alt="@product.Name" />
+            <a class="product-button" href="product/@product.Id">
+                <img src="@product.ImageUrl" alt="@product.Name" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
                 <span class="name">@product.Name</span>
             </a>
@@ -41,9 +41,10 @@
     [Parameter] public int FilteredPriceMin { get; set; }
     [Parameter] public int FilteredPriceMax { get; set; }
     [Parameter] public IEnumerable<string> FilteredShops { get; set; } = Array.Empty<string>();
+    [Parameter] public IEnumerable<string> FilteredKeywords { get; set; } = Array.Empty<string>();
+
 
     // Дані
-    private string ProductID { get; set; }
     private List<Product> Products = new();
     private List<Product> FilteredProducts = new();
     private List<Product> PagedProducts = new();
@@ -62,93 +63,6 @@
         await LoadProductsAsync();
         ApplyFilters();
     }
-
-    protected override void OnParametersSet()
-    {
-        if (!isLoading)
-            ApplyFilters();
-    }
-
-    private async Task LoadProductsAsync()
-    {
-        try
-        {
-            isLoading = true;
-            loadError = null;
-
-            // Коли буде API:
-
-            // Поки — мокові дані:
-            @* await Task.Delay(200);
-            for (int i = 1; i <= 42; i++)
-            {
-
-                Products.Add(new Product
-                {
-                    Id = i,
-                    Name = $"Product {i}",
-                    Price = 10 + i,
-                    ImageUrl = "/images/potato.jpg",
-                    Shop = (i % 2 == 0) ? "Новус" : "АТБ"
-                });
-            } *@
-            Products = await Http.GetFromJsonAsync<List<Product>>("api/discounts") ?? new();
-        }
-        catch (Exception ex)
-        {
-            loadError = "Не вдалося завантажити продукти: " + ex.Message;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void ApplyFilters()
-    {
-        var shops = (FilteredShops ?? Array.Empty<string>())
-        .Where(s => !string.IsNullOrWhiteSpace(s))
-        .Select(s => s.Trim())
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        FilteredProducts = Products
-        .Where(p => p.Price >= FilteredPriceMin &&
-        p.Price <= FilteredPriceMax)
-        .OrderBy(p => p.Name)
-        .ToList();
-
-        Page = 1;
-        UpdatePagedProducts();
-    }
-    @*&&
-        (shops.Count == 0 || shops.Contains(p.Shop)))*@
-    private void UpdatePagedProducts()
-    {
-        PagedProducts = FilteredProducts
-        .Skip((Page - 1) * PageSize)
-        .Take(PageSize)
-        .ToList();
-        StateHasChanged();
-    }
-
-    private void NextPage()
-    {
-        if (Page < TotalPages)
-        {
-            Page++;
-            UpdatePagedProducts();
-        }
-    }
-
-    private void PrevPage()
-    {
-        if (Page > 1)
-        {
-            Page--;
-            UpdatePagedProducts();
-        }
-    }
-
     public sealed class Product
     {
         [JsonPropertyName("id")]
@@ -185,8 +99,124 @@
         public DateTimeOffset? WhenUpdated { get; set; }
 
         [JsonPropertyName("imageUrl")]
-        public string imageUrl { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
 
-        public string TimeImage { get; set; } = "images/potato.jpg";
     }
+    @* public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Shop { get; set; }
+        public string ImageUrl { get; set; }
+        public decimal Price { get; set; }
+    } *@
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            // Коли буде API:
+
+            // Поки — мокові дані:
+            @* await Task.Delay(200);
+            for (int i = 1; i <= 42; i++)
+            {
+
+                Products.Add(new Product
+                {
+                    Id = i,
+                    Name = $"Product {i}",
+                    Price = 10 + i,
+                    ImageUrl = "/images/potato.jpg",
+                    Shop = (i % 2 == 0) ? "Новус" : "АТБ"
+                });
+            } *@
+            Products = await Http.GetFromJsonAsync<List<Product>>(requestUri: "api/discounts") ?? new();
+        }
+        catch (Exception ex)
+        {
+            loadError = "Не вдалося завантажити продукти: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        ApplyFilters(); // без умови
+    }
+
+    private void ApplyFilters()
+    {
+        if (isLoading || Products.Count == 0)
+        {
+            // коли дані ще вантажаться — нічого не робимо
+            return;
+        }
+
+        var shops = (FilteredShops ?? Array.Empty<string>())
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Select(s => s.Trim())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var keywords = (FilteredKeywords ?? Array.Empty<string>())
+        .Where(k => !string.IsNullOrWhiteSpace(k))
+        .Select(k => k.Trim().ToLowerInvariant())
+        .ToList();
+
+        bool AndMode = true;
+
+        FilteredProducts = Products
+        .Where(p => p.Price >= FilteredPriceMin && p.Price <= FilteredPriceMax)
+        // .Where(p => shops.Count == 0 || shops.Contains(p.Shop)) // коли буде Shop
+        .Where(p =>
+        {
+            if (keywords.Count == 0) return true;
+            var name = (p.Name ?? string.Empty).ToLowerInvariant();
+            return AndMode ? keywords.All(k => name.Contains(k))
+    : keywords.Any(k => name.Contains(k));
+        })
+        .OrderBy(p => p.Name)
+        .ToList();
+
+        Page = 1;
+        UpdatePagedProducts();
+    }
+
+    @*&&
+        (shops.Count == 0 || shops.Contains(p.Shop)))*@
+    private void UpdatePagedProducts()
+    {
+        PagedProducts = FilteredProducts
+        .Skip((Page - 1) * PageSize)
+        .Take(PageSize)
+        .ToList();
+        StateHasChanged();
+    }
+
+    private void NextPage()
+    {
+        if (Page < TotalPages)
+        {
+            Page++;
+            UpdatePagedProducts();
+        }
+    }
+
+    private void PrevPage()
+    {
+        if (Page > 1)
+        {
+            Page--;
+            UpdatePagedProducts();
+        }
+    }
+
+
+
 }

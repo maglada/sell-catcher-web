@@ -1,50 +1,48 @@
 @page "/categories"
 
 <div class="page-layout">
-    <aside class="sidebar">
-        <div>
-            <strong>Ключові слова</strong>
-        </div>
+    <div class="sidebar-sticky">
+        <aside class="sidebar">
+            <div>
+                <strong>Ключові слова</strong>
+                <input type="text" placeholder="молоко, хліб 2.5%..." value="@KeywordQuery" @oninput="OnKeywordTyping"
+                    @onblur="OnKeywordConfirm" style="width:auto; border:2px solid black; border-radius:10px;" />
 
-        <div>
-            <strong>Країна</strong><br />
-            <input type="checkbox" name="country" id="Moroko"> Мороко<br />
-            <input type="checkbox" name="country" id="Brazil"> Бразилія<br />
-            <input type="checkbox" name="country" id="Turkey"> Туреччина<br />
-            <input type="checkbox" name="country" id="China"> Китай<br />
-            <input type="checkbox" name="country" id="Ukraine"> Україна<br />
-        </div>
+                @if (Keywords.Count > 0)
+                {
+                    <div class="keyword-chips">
+                        @foreach (var k in Keywords)
+                        {
+                            <span class="chip">@k</span>
+                        }
+                    </div>
+                }
+            </div>
 
-        <div>
-            <p>
-                <strong>Ціна</strong>
+            <div>
+                <p>
+                    <strong>Ціна</strong>
 
-                <input class="inputPrice" type="number" placeholder=@MinPrice @bind="MinPrice" @bind:event="oninput" />
+                    <input class="inputT" type="number" placeholder=@MinPrice @bind="MinPrice" @bind:event="oninput" />
 
-                <span>–</span>
+                    <span>–</span>
 
-                <input class="inputPrice" type="number" placeholder=@MaxPrice @bind="MaxPrice" @bind:event="oninput" />
-            </p>
+                    <input class="inputT" type="number" placeholder=@MaxPrice @bind="MaxPrice" @bind:event="oninput" />
+                </p>
 
-            <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
-        </div>
+                <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
+            </div>
 
-        <div>
-            <strong>Фасування</strong><br />
-            <input type="checkbox" name="packaging" id="packaged"> Фасований<br />
-            <input type="checkbox" name="packaging" id="gravimetric"> Грамовий
-        </div>
-
-        <div>
-            <p><strong>Магазин</strong></p>
-            <input type="checkbox" @bind="ShowATB" /> АТБ<br />
-            <input type="checkbox" @bind="ShowNovus" /> Новус
-        </div>
-    </aside>
-
+            <div>
+                <p><strong>Магазин</strong></p>
+                <input type="checkbox" @bind="ShowNovus" /> Новус
+            </div>
+        </aside>
+    </div>
     <main class="content">
         @* Якщо ProductList очікує int, змінюй його на int? або підставляй дефолти *@
-        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()" />
+        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()"
+            FilteredKeywords="Keywords" />
     </main>
 </div>
 
@@ -55,6 +53,35 @@
     // Змінили на nullable, щоб працювали placeholder і oninput під час набору
     private int MinPrice { get; set; } = 100;
     private int MaxPrice { get; set; } = 1000;
+
+    private string KeywordQuery { get; set; } = "";
+    private List<string> Keywords { get; set; } = new();
+
+    // Під час набору просто оновлюємо текст (без зайвих перерахунків)
+    private void OnKeywordTyping(ChangeEventArgs e)
+    {
+        KeywordQuery = e.Value?.ToString() ?? "";
+    }
+
+    // Коли користувач натиснув поза полем або покинув фокус
+    private void OnKeywordConfirm(FocusEventArgs e)
+    {
+        Keywords = SplitKeywords(KeywordQuery);
+        StateHasChanged(); // повідомляємо Blazor, щоб оновився ProductList
+    }
+
+    private static List<string> SplitKeywords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return new();
+        return text
+        .ToLowerInvariant()
+        .Split(new[] { ' ', ',', ';', '|', '/', '\\', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(s => s.Trim())
+        .Where(s => s.Length > 0)
+        .Distinct()
+        .ToList();
+    }
+
 
     private void OnRangeChangedPrice((int min, int max) range)
     {
