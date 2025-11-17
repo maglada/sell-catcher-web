@@ -41,7 +41,6 @@ namespace SellCatcher.Api.Services
                 t.Revoked = true;
                 t.ReplacedBy = replacedBy;
                 col.Update(t);
-                // додатково кладемо в blacklist (щоб ніде не використовували)
                 AddToBlacklistAsync(token, t.ExpiresAt, "revoked refresh token").GetAwaiter().GetResult();
             }
             return Task.CompletedTask;

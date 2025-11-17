@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.DTOs.User;
+using SellCatcher.Api.DTOs.Token;
+using SellCatcher.Api.Services;
 
 namespace SellCatcher.Api.Services
 {

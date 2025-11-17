@@ -63,5 +63,11 @@ namespace SellCatcher.Api.Controllers
                .Take(2);
            return Ok(topDeals);
         }
+         [HttpGet("products")] /*Эндпоинт получения всех товаров*/
+        public IActionResult GetAllProducts()
+        {
+            var products = _discountService.GetAll();
+            return Ok(products);
+        }
     }
 }

@@ -20,14 +20,15 @@ var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 
 builder.Services.AddOpenApi();
 
-
+builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository("sellcatcher.db"));
+    
 builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddControllers();
-builder.Services.AddScoped<AuthSettings>();
+builder.Services.AddSingleton<ITokenRepository, LiteDbTokenRepository>();
+builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
-builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddAuth();
 builder.Services.AddScoped<AccountService>();
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
@@ -44,119 +45,110 @@ app.MapControllers();
 
 app.Run();
 
-namespace ProductScraperApp
-{
-    internal class Program
-    {
-        static async Task Main(string[] args)
-        {
-            var directory = args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "links");
+// // namespace ProductScraperApp
+// // {
+// //     internal class Program
+// //     {
+// //         static async Task Main(string[] args)
+// //         {
+// //             var directory = args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "links");
 
-            var config = new ScraperConfig
-            {
-                Headless = true,
-                EnableLogging = true,
-                EnableDebugOutput = false,
-                SaveDebugScreenshots = false,
-                SaveErrorScreenshots = false,
-                SlowMo = 500
-            };
+// //             var config = new ScraperConfig
+// //             {
+// //                 Headless = true,
+// //                 EnableLogging = true,
+// //                 EnableDebugOutput = false,
+// //                 SaveDebugScreenshots = false,
+// //                 SaveErrorScreenshots = false,
+// //                 SlowMo = 500
+// //             };
 
-            var factory = new ScraperFactory(config);
+// //             var factory = new ScraperFactory(config);
 
-            try
-            {
-                var results = await factory.ProcessAllFilesAsync(directory, "NovusLinks_*.txt");
+// //             try
+// //             {
+// //                 var results = await factory.ProcessAllFilesAsync(directory, "NovusLinks_*.txt");
 
-                foreach (var kvp in results)
-                {
-                    Console.WriteLine($"File: {kvp.Key} -> Products: {kvp.Value.Count}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Fatal error: {ex}");
-            }
-        }
-    }
-}
-/// <summary>
-/// --------------Run Parser----------------
-/// </summary>
+// //                 foreach (var kvp in results)
+// //                 {
+// //                     Console.WriteLine($"File: {kvp.Key} -> Products: {kvp.Value.Count}");
+// //                 }
+// //             }
+// //             catch (Exception ex)
+// //             {
+// //                 Console.WriteLine($"Fatal error: {ex}");
+// //             }
+// //         }
+// //     }
+// // }
+// /// <summary>
+// /// --------------Run Parser----------------
+// /// </summary>
+// // using static SellCatcher.Api.Services.ParserProductService;
 
-//class Test
-//{
-//    static async Task Main()
-//    {
-//        Console.WriteLine("Enter store name to parse (Novus / Silpo):");
-//        string storeName = Console.ReadLine()?.Trim().ToUpper() ?? "NOVUS";
+// // class Test
+// // {
+// //    static async Task Main()
+// //    {
+// //        await TestParserRun();
+// //    }
 
-//        await TestParserRun(storeName);
-//    }
+// //    static async Task TestParserRun()
+// //    {
+// //        Console.WriteLine("Start parsing Novus...\n");
 
-//    static async Task TestParserRun(string storeName)
-//    {
-//        Console.WriteLine($"Starting parsing {storeName}...\n");
+// //        try
+// //        {
+// //            var factory = new ScraperFactory(new ScraperConfig
+// //            {
+// //                Headless = true,
+// //                EnableLogging = true,
+// //                EnableDebugOutput = false,
+// //                SaveDebugScreenshots = false,
+// //                SaveErrorScreenshots = false,
+// //                SlowMo = 1000
+// //            });
 
-//        try
-//        {
-//            var config = new ScraperConfig
-//            {
-//                Headless = true,
-//                EnableLogging = true,
-//                EnableDebugOutput = false,
-//                SaveDebugScreenshots = false,
-//                SaveErrorScreenshots = false,
-//                SlowMo = 1000
-//            };
+// //            string sitesFolder = Path.Combine(AppContext.BaseDirectory, "sites");
 
-//            var factory = new ScraperFactory(config);
-//            string sitesFolder = Path.Combine(AppContext.BaseDirectory, "sites");
+// //            var results = await factory.ProcessAllFilesAsync(
+// //                directory: sitesFolder,
+// //                filePattern: "NovusLinks_*.txt"
+// //            );
 
-//            string filePattern = storeName switch
-//            {
-//                "NOVUS" => "NovusLinks_*.txt",
-//                "SILPO" => "SilpoLinks_*.txt",
-//                _ => throw new ArgumentException("Unknown store!")
-//            };
+// //            var productService = new ParserProductService.ProductService();
+// //            int totalSaved = 0;
+// //            int totalProducts = 0;
 
-//            var results = await factory.ProcessAllFilesAsync(
-//                directory: sitesFolder,
-//                filePattern: filePattern
-//            );
+// //            foreach (var result in results)
+// //            {
+// //                string fileName = result.Key;
+// //                var products = result.Value;
+// //                totalProducts += products.Count;
+// //                int saved = productService.SaveProducts(products, storeName: "NOVUS");
+// //                totalSaved += saved;
+// //            }
 
-//            var productService = new ParserProductService.ProductService();
-//            int totalSaved = 0;
-//            int totalProducts = 0;
+// //            Console.WriteLine($"\nTotal products parsed: {totalProducts}");
+// //            Console.WriteLine($"Saved to DB: {totalSaved}\n");
+// //            Console.WriteLine("Goods categories for NOVUS:\n");
 
-//            foreach (var result in results)
-//            {
-//                var products = result.Value;
-//                totalProducts += products.Count;
-//                int saved = productService.SaveProducts(products, storeName);
-//                totalSaved += saved;
-//            }
+// //            var categories = productService.GetCategories("NOVUS");
 
-//            Console.WriteLine($"\nTotal products parsed: {totalProducts} from {storeName}");
-//            Console.WriteLine($"Saved to DB: {totalSaved}\n");
+// //            foreach (var category in categories)
+// //            {
+// //                var categoryProducts = category.Products;
+// //                var onSaleCount = categoryProducts.Count(p => p.IsOnSale);
+// //                Console.WriteLine($"{category.Name}: {categoryProducts.Count} products ({onSaleCount} with discount)");
+// //            }
 
-//            var categories = productService.GetCategories(storeName);
-//            Console.WriteLine($"Categories for {storeName}:");
+// //            Console.WriteLine("\nParsing finished.");
+// //        }
+// //        catch (Exception ex)
+// //        {
+// //            Console.WriteLine(ex.Message);
+// //        }
 
-//            foreach (var category in categories)
-//            {
-//                int count = category.Products.Count;
-//                int onSaleCount = category.Products.Count(p => p.IsOnSale);
-//                Console.WriteLine($"  {category.Name}: {count} products ({onSaleCount} with discount)");
-//            }
-
-//            Console.WriteLine("\nParsing finished.");
-//        }
-//        catch (Exception ex)
-//        {
-//            Console.WriteLine(ex.Message);
-//        }
-
-//        Console.ReadKey();
-//    }
-//}
+// //        Console.ReadKey();
+// //    }
+// // }

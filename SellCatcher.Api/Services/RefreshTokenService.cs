@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.DTOs.Token;
-using SellCatcher.Api.Services;
 
 namespace SellCatcher.Api.Services
 {
