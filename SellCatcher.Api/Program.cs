@@ -57,9 +57,10 @@ foreach (var pattern in filepatterns)
 
     foreach (var result in results)
     {
+        string storeName = pattern.Contains("Novus") ? "NOVUS" : "SILPO";
         var products = result.Value;
         totalProducts += products.Count;
-        int saved = productService.SaveProducts(products);
+        int saved = productService.SaveProducts(products, storeName);
         totalSaved += saved;
     }
 
