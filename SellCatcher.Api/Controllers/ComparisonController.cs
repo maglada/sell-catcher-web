@@ -45,5 +45,52 @@ namespace SellCatcher.Api.Controllers
 
             return Ok(discounts);
         }
+
+        // BAD SOLUTION BELOW - TO REFACTOR LATER    
+        [HttpGet("filter/{category}")] /*Эндпоинт фильтрации скидок по категории*/
+        public IActionResult FilterByCategory(string category)
+        {
+            var discounts = _discountService
+                .GetAll()
+                .Where(d => d.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+
+            if (!discounts.Any())
+                return NotFound(new { Message = "Знижки в цій категорії не знайдено." });
+
+            return Ok(discounts);
+        }
+
+        [HttpGet("filter/sotre/{storeName}")] /*Эндпоинт фильтрации скидок по магазину*/
+        public IActionResult FilterByStore(string storeName)
+        {
+            var discounts = _discountService
+                .GetAll()
+                .Where(d => d.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
+            var store = _storeService.GetByName(storeName);
+            if (store == null)
+                return NotFound(new { Message = "Магазин не знайдено." });
+            return Ok(store);
+        }
+
+        [HttpGet("filter/price/{minPrice}/{maxPrice}")] /*Эндпоинт фильтрации скидок по ценовому диапазону*/
+        public IActionResult FilterByPriceRange(decimal minPrice, decimal maxPrice)
+        {
+            var discounts = _discountService
+                .GetAll()
+                .Where(d => d.Price >= minPrice && d.Price <= maxPrice);
+            if (!discounts.Any()) return NotFound(new { Message = "Знижки в цьому ціновому діапазоні не знайдено." });
+            return Ok(discounts);    
+        }
+
+        [HttpGet("filter/search/{searchTerm}")]
+        public IActionResult SearchDiscounts(string searchTerm)
+        {
+            var discounts = _discountService
+                .GetAll()
+                .Where(d => d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            if (!discounts.Any())
+                return NotFound(new { Message = "Знижки за цим запитом не знайдено." });
+            return Ok(discounts);
+        }
     }
 }
