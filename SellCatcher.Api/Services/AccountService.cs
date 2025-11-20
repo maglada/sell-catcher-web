@@ -10,16 +10,16 @@ namespace SellCatcher.Api.Services
 {
     public class AccountService(AccountRepository accountRepository, JWTService jwtService)
     {
-        public void Register(string? userName, string? firstName, string? lastName, string password)
+        public void Register(string? userName, string? email, string? firstName, string? lastName, string password)
         {
             // Hash the password (for simplicity, using plain text here; use a proper hashing algorithm in production)
             var passwordHash = password; // Replace with actual hashing
             var account = new Account 
             {
                 UserName = userName,
+                Email = email,
                 FirstName = firstName,
                 LastName = lastName,
-                PasswordHash = passwordHash
             };
             var passwordHasher = new PasswordHasher<Account>();
             account.PasswordHash = passwordHasher.HashPassword(account, password);

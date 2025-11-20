@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public IActionResult Register([FromBody] RegisterRequestDto request)
     {
-        accountService.Register(request.UserName, request.FirstName, request.LastName, request.Password);
+        accountService.Register(request.UserName, request.Email, request.FirstName, request.LastName, request.Password);
         var token = accountService.Login(request.UserName, request.Password);
         return Ok(new { Message = "Registration successful", Token = token });
     }

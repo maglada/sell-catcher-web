@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.AspNetCore.Identity;
+using SellCatcher.Api.Models;
 
-namespace SellCatcher.Api.Models
+namespace SellCatcher.Api.Services
 {
     public class AccountRepository
     {
@@ -40,6 +41,13 @@ namespace SellCatcher.Api.Models
             using var db = new LiteDatabase(_dbPath);
             var col = db.GetCollection<Account>("accounts");
             return col.FindOne(a => a.UserName == userName);
+        }
+
+        public Account? GetByEmail(string email)
+        {
+            using var db = new LiteDatabase(_dbPath);
+            var col = db.GetCollection<Account>("accounts");
+            return col.FindOne(a => a.Email == email);
         }
         public List<Account> GetAll(){
             using var db = new LiteDatabase(_dbPath);
