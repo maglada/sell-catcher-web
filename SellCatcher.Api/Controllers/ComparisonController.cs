@@ -46,8 +46,10 @@ namespace SellCatcher.Api.Controllers
             return Ok(discounts);
         }
 
-        // BAD SOLUTION BELOW - TO REFACTOR LATER    
-        [HttpGet("filter/{category}")] /*Эндпоинт фильтрации скидок по категории*/
+        // BAD SOLUTION BELOW - TO REFACTOR LATER
+        //TOTEST POSTMAN MANUALLY
+        //categ filter    
+        [HttpGet("filter/{category}")] 
         public IActionResult FilterByCategory(string category)
         {
             var discounts = _discountService
@@ -60,7 +62,8 @@ namespace SellCatcher.Api.Controllers
             return Ok(discounts);
         }
 
-        [HttpGet("filter/sotre/{storeName}")] /*Эндпоинт фильтрации скидок по магазину*/
+        //name filter
+        [HttpGet("filter/sotre/{storeName}")] 
         public IActionResult FilterByStore(string storeName)
         {
             var discounts = _discountService
@@ -72,7 +75,8 @@ namespace SellCatcher.Api.Controllers
             return Ok(store);
         }
 
-        [HttpGet("filter/price/{minPrice}/{maxPrice}")] /*Эндпоинт фильтрации скидок по ценовому диапазону*/
+        //minmax filter
+        [HttpGet("filter/price/{minPrice}/{maxPrice}")]
         public IActionResult FilterByPriceRange(decimal minPrice, decimal maxPrice)
         {
             var discounts = _discountService
@@ -82,6 +86,7 @@ namespace SellCatcher.Api.Controllers
             return Ok(discounts);    
         }
 
+        //keyword filter
         [HttpGet("filter/search/{searchTerm}")]
         public IActionResult SearchDiscounts(string searchTerm)
         {
