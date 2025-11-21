@@ -142,6 +142,7 @@ namespace SellCatcher.Api.Controllers
                     d.Name.Contains(searchTerm.ToString(), StringComparison.OrdinalIgnoreCase));
             }
             
+            // fin. this one is what user gets(thats why ?param1=x&param2=y is possible)
             var result = discounts.ToList();
             
             if (!result.Any())
