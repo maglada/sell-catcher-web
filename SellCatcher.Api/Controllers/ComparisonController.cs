@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
 
@@ -48,7 +50,7 @@ namespace SellCatcher.Api.Controllers
 
         // BAD SOLUTION BELOW - TO REFACTOR LATER
         //TOTEST POSTMAN MANUALLY
-        //categ filter    
+/*        //categ filter    
         [HttpGet("filter/{category}")] 
         public IActionResult FilterByCategory(string category)
         {
@@ -89,7 +91,7 @@ namespace SellCatcher.Api.Controllers
         //keyword filter
         [HttpGet("filter/search/{searchTerm}")]
         public IActionResult SearchDiscounts(string searchTerm)
-        {
+        {   
             var discounts = _discountService
                 .GetAll()
                 .Where(d => d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
@@ -97,5 +99,56 @@ namespace SellCatcher.Api.Controllers
                 return NotFound(new { Message = "Знижки за цим запитом не знайдено." });
             return Ok(discounts);
         }
+*/
+
+        [HttpGet("filter")]
+        public IActionResult Filtering()  //will look like filter?category=x. CAN BE COMBINED like filter?category=x&minPrice=y and so on
+        {
+            var discounts = _discountService.GetAll().AsQueryable();
+            
+            // categ filter (?category=x)
+            if (Request.Query.TryGetValue("category", out var category))
+            {
+                discounts = discounts.Where(d => 
+                    d.Category.Equals(category.ToString(), StringComparison.OrdinalIgnoreCase));
+            }
+            
+            // name filter (?storeName=x)
+            if (Request.Query.TryGetValue("storeName", out var storeName))
+            {
+                discounts = discounts.Where(d => 
+                    d.Name.Equals(storeName.ToString(), StringComparison.OrdinalIgnoreCase));
+            }
+            
+            // min filter (?minPrice=x)
+            if (Request.Query.TryGetValue("minPrice", out var minPriceStr) 
+                && decimal.TryParse(minPriceStr, out var minPrice))
+            {
+                discounts = discounts.Where(d => d.Price >= minPrice);
+            }
+            
+            // max filter (?maxPrice=x)
+            if (Request.Query.TryGetValue("maxPrice", out var maxPriceStr) 
+                && decimal.TryParse(maxPriceStr, out var maxPrice))
+            {
+                discounts = discounts.Where(d => d.Price <= maxPrice);
+            }
+            // BOT ABOVE CAN BE SET TO DIFF SLIDERS(two sliders in frontend)
+            
+            // search filter (?search=x)
+            if (Request.Query.TryGetValue("search", out var searchTerm))
+            {
+                discounts = discounts.Where(d => 
+                    d.Name.Contains(searchTerm.ToString(), StringComparison.OrdinalIgnoreCase));
+            }
+            
+            var result = discounts.ToList();
+            
+            if (!result.Any())
+                return NotFound(new { Message = "Знижки за заданими критеріями не знайдено." });
+            
+            return Ok(result);
+        }
+        
     }
 }
