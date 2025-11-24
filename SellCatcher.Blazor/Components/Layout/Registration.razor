@@ -1,90 +1,356 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text.Json
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
 <div class="modal-overlay" @onclick="OnBackdropClick">
     <div class="@Class" @onclick:stopPropagation>
-           <div class="actions">
-                <input type="radio" name="auth" id="SignIn" checked @onclick="SignTypeIn">
-                <label for="SignIn" class="button">Вхід</label>
+        <div class="actions">
+            <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
+            <label for="SignIn" class="button">Sign In</label>
 
-                <input type="radio" name="auth" id="SignUp" checked @onclick="SignTypeUp">
-                <label for="SignUp" class="button">Реєстрація</label>
-            </div>
+            <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
+            <label for="SignUp" class="button">Sign Up</label>
+        </div>
 
-        @if(Enter)
+        @if (Enter)
         {
-            <form>
+            <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
+                <DataAnnotationsValidator />
+
                 <div style="margin-top:10px;">
-                    <label>Мобільний телефон</label><br />
-                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@LoginPhone">
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" />
+                    <ValidationMessage For="@(() => loginModel.Phone)" />
                 </div>
+
                 <div style="margin-top:10px;">
-                    <label>Пароль</label><br />
-                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind = "@LoginPassword"/>
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
                 </div>
-                
-            </form>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @if (isBusy)
+                        {
+                            <span>Signing in...</span>
+                        }
+                        else
+                        {
+                            <span>Sign In</span>
+                        }
+                    </button>
+                    <button type="button" class="button-secondary" disabled="@isBusy" @onclick="Close">Cancel</button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text">@error</p>
+                }
+            </EditForm>
         }
-        else{
-            <form>
+        else
+        {
+            <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
+                <DataAnnotationsValidator />
+
                 <div style="margin-top:10px;">
-                    <label>Ім’я</label><br />
-                    <input type="text" placeholder="Введіть ім’я чи нікнейм" class="inputInfo" @bind="@RegisterName"/>
+                    <label>Name</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Name" />
+                    <ValidationMessage For="@(() => registerModel.Name)" />
                 </div>
 
                 <div style="margin-top:10px;">
                     <label>Email</label><br />
-                    <input type="email" placeholder="Введіть email" class="inputInfo" @bind="@RegisterEmail"/>
-                </div>
-                <div style="margin-top:10px;">
-                    <label>Мобільний телефон</label><br />
-                    <input type="phone" placeholder="Введіть номер телефону" class="inputInfo" @bind="@RegisterPhone"/>
+                    <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
+                    <ValidationMessage For="@(() => registerModel.Email)" />
                 </div>
 
                 <div style="margin-top:10px;">
-                    <label>Пароль</label><br />
-                    <input type="password" placeholder="Введіть пароль" class="inputInfo" @bind="@RegisterPassword"/>
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" />
+                    <ValidationMessage For="@(() => registerModel.Phone)" />
                 </div>
 
-                
-            </form>
+                <div style="margin-top:10px;">
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
+                    <ValidationMessage For="@(() => registerModel.Password)" />
+                </div>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @if (isBusy)
+                        {
+                            <span>Registering...</span>
+                        }
+                        else
+                        {
+                            <span>Register</span>
+                        }
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text">@error</p>
+                }
+            </EditForm>
         }
-        <div class="actions">
-                    <button type="button" @onclick="Close" class="bottonEnter">Увійти</button>
-        </div>
     </div>
 </div>
 
 @code {
-
-    // Змінні для входу
-    string LoginPhone { get; set; } = "";
-    string LoginPassword { get; set; } = "";
-
-    // Змінні для реєстрації
-    string RegisterName { get; set; } = "";
-    string RegisterEmail { get; set; } = "";
-    string RegisterPhone { get; set; } = "";
-    string RegisterPassword { get; set; } = "";
+    private const bool UseFakeApi = false;
 
     string Class = "modal";
     bool Enter = true;
-    [Parameter]
-    public EventCallback OnClose { get; set; }   // викликається при закритті
+    bool isBusy = false;
+    string? error;
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<AuthResult> OnSuccess { get; set; }
+
+    LoginRequest loginModel = new();
+    RegisterRequest registerModel = new();
+
     private void SignTypeIn()
     {
+        error = null;
         Class = "modal";
         Enter = true;
     }
+
     private void SignTypeUp()
     {
-        Class="modal-reg";
+        error = null;
+        Class = "modal-reg";
         Enter = false;
     }
-    private void Close()
+
+    private async Task SubmitLogin()
     {
-        OnClose.InvokeAsync(); // виклик події з Layout-а
+        error = null;
+        isBusy = true;
+        try
+        {
+            if (UseFakeApi)
+            {
+                await Task.Delay(400);
+                return;
+            }
+
+            var body = new LoginRequestDto
+            {
+                UserName = loginModel.Phone,
+                Password = loginModel.Password
+            };
+
+            using var resp = await Http.PostAsJsonAsync("/api/login", body);
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                error = "Invalid phone or password.";
+                return;
+            }
+            if (!resp.IsSuccessStatusCode)
+            {
+                error = await ReadErrorAsync(resp);
+                return;
+            }
+
+            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
+            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
+            {
+                error = "Invalid server response.";
+                return;
+            }
+
+            var ok = new AuthResult
+            {
+                Token = okJson.Token,
+                User = new UserInfo
+                {
+                    Id = "",
+                    Name = loginModel.Phone,
+                    Email = "",
+                    Phone = loginModel.Phone,
+                    Role = "User"
+                }
+            };
+
+            await PersistAuthAsync(ok);
+            await OnSuccess.InvokeAsync(ok);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Network error: " + ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
-    private void OnBackdropClick()
+    private async Task SubmitRegister()
     {
-        OnClose.InvokeAsync(); // якщо клік поза вікном — закрити
+        error = null;
+        isBusy = true;
+        try
+        {
+            if (UseFakeApi)
+            {
+                await Task.Delay(400);
+                return;
+            }
+
+            var dto = ToRegisterDto(registerModel);
+
+            using var resp = await Http.PostAsJsonAsync("/api/register", dto);
+            if (!resp.IsSuccessStatusCode)
+            {
+                error = await ReadErrorAsync(resp);
+                return;
+            }
+
+            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
+            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
+            {
+                error = "Invalid server response.";
+                return;
+            }
+
+            var ok = new AuthResult
+            {
+                Token = okJson.Token,
+                User = new UserInfo
+                {
+                    Id = "",
+                    Name = registerModel.Name,
+                    Email = registerModel.Email,
+                    Phone = registerModel.Phone,
+                    Role = "User"
+                }
+            };
+
+            await PersistAuthAsync(ok);
+            await OnSuccess.InvokeAsync(ok);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Network error: " + ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private RegisterRequestDto ToRegisterDto(RegisterRequest r)
+    {
+        var parts = (r.Name ?? "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var first = parts.Length > 0 ? parts[0] : "";
+        var last = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : "";
+
+        return new RegisterRequestDto
+        {
+            UserName = r.Phone,
+            FirstName = first,
+            LastName = last,
+            Password = r.Password
+        };
+    }
+
+    private async Task PersistAuthAsync(AuthResult ok)
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", ok.Token);
+        await JS.InvokeVoidAsync("localStorage.setItem", "auth_user", JsonSerializer.Serialize(ok.User));
+    }
+
+    private async Task<string?> ReadErrorAsync(HttpResponseMessage resp)
+    {
+        try
+        {
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("detail", out var detail))
+                return detail.GetString();
+            if (doc.RootElement.TryGetProperty("title", out var title))
+                return title.GetString();
+        }
+        catch { }
+
+        var txt = await resp.Content.ReadAsStringAsync();
+        if (!string.IsNullOrWhiteSpace(txt)) return txt;
+        return $"Error {(int)resp.StatusCode}";
+    }
+
+    private void Close() => OnClose.InvokeAsync();
+    private void OnBackdropClick() => OnClose.InvokeAsync();
+
+    public sealed class LoginRequest
+    {
+        [Required(ErrorMessage = "Please enter phone number")]
+        [StringLength(20, MinimumLength = 7)]
+        public string Phone { get; set; } = "";
+
+        [Required(ErrorMessage = "Please enter password")]
+        [StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class RegisterRequest
+    {
+        [Required, StringLength(80)]
+        public string Name { get; set; } = "";
+
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required, StringLength(20, MinimumLength = 7)]
+        public string Phone { get; set; } = "";
+
+        [Required, StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class LoginRequestDto
+    {
+        public string UserName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class RegisterRequestDto
+    {
+        public string UserName { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public sealed class UserInfo
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string? Role { get; set; }
+    }
+
+    public sealed class AuthResult
+    {
+        public string Token { get; set; } = "";
+        public UserInfo User { get; set; } = new();
+    }
+
+    public sealed class AuthResultFromApi
+    {
+        public string? Message { get; set; }
+        public string Token { get; set; } = "";
     }
 }

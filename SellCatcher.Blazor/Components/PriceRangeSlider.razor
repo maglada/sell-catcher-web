@@ -23,9 +23,7 @@
         get => _minValue;
         set
         {
-            // кламп до діапазону
             var v = Math.Clamp(value, Min, Max - Step);
-            // не даємо заїхати на MaxValue
             if (_maxValue - v < Step) v = _maxValue - Step;
 
             if (v != _minValue)
@@ -61,7 +59,6 @@
         double left = Math.Clamp(p1, 0, 100);
         double width = Math.Clamp(p2 - p1, 0, 100);
 
-        // ✅ ось тут — заміна на варіант без ком
         int leftPct = (int)Math.Round(left);
         int widthPct = (int)Math.Round(width);
         ActiveStyle = $"left:{leftPct}%; width:{widthPct}%;";
@@ -75,7 +72,7 @@
         _minValue = Min;
         _maxValue = Max;
         if (_maxValue - _minValue < Step)
-            _maxValue = _minValue + Step; // гарантована різниця
+            _maxValue = _minValue + Step;
         UpdateActiveTrack();
     }
 

@@ -54,3 +54,8 @@
   background-color: rgb(233, 181, 10);
   border-style: hidden;
 }
+
+.iconbutton {
+  background-color: #f1f1f185;
+  border: none;
+}

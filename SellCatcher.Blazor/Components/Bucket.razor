@@ -1,26 +1,45 @@
-<div>
+<div class="bucket-wrapper">
+    <button class="bucket-button" @onclick="ToggleBucket">
+        <img src="icons/shopping-cart.svg" /> Корзина
+    </button>
 
-    <button class="bucket-button" @onclick="@bucketZoneOn"><img src="icons/shopping-cart.svg" />Корзина</button>
-
-</div>
-<div>
     @if (OpenBucket)
     {
-        <div>
+        <div class="overlay" @onclick="ToggleBucket"></div>
 
+        <div class="bucket-panel">
+            <div class="bucket-header">
+                <h3>Кошик</h3>
+                <button class="close-btn" @onclick="ToggleBucket">×</button>
+            </div>
 
+            <div class="bucket-items">
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="bucket-item">
+                        <img src="images/potato.jpg" />
+                        <div class="item-info">
+                            <span class="item-name">Product @i</span>
+                            <span class="item-price">₴@(10 + i)</span>
+                        </div>
+                        <div class="item-qty">
+                            <button>-</button>
+                            <span>@(1 + i)</span>
+                            <button>+</button>
+                        </div>
+                    </div>
+                }
+            </div>
 
-
-
-
+            <div class="bucket-footer">
+                <div class="total">Разом: ₴123</div>
+                <button class="checkout">Оформити</button>
+            </div>
         </div>
     }
 </div>
 
 @code {
     bool OpenBucket = false;
-    void bucketZoneOn()
-    {
-        OpenBucket = !OpenBucket;
-    }
+    void ToggleBucket() => OpenBucket = !OpenBucket;
 }

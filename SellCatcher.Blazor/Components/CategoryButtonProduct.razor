@@ -1,13 +1,67 @@
-<div class="category-button">
-    <a href="@Link">
-        <img src="@ImageUrl" alt="@Title" class="category-image" />
-        <div class="category-title">@Title</div>
-    </a>
-</div>
+@if (_loading)
+{
+    <div class="category-button skeleton">Loading…</div>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="category-button error">⚠ @_error</div>
+}
+else
+{
+    <div class="category-button">
+        <a href="@Link">
+            <img src="@ImageUrl" alt="@Title" class="category-image" style="height:@ImageHight;" />
+            <div class="category-title">@TitlePrice</div>
+        </a>
+    </div>
+}
 
 @code {
     [Parameter] public string Title { get; set; }
+    [Parameter] public string TitlePrice { get; set; } = "";
     [Parameter] public string Link { get; set; }
     [Parameter] public string ImageUrl { get; set; }
+    [Parameter] public string ImageHight { get; set; }
 
+    [Parameter] public string? ApiUrl { get; set; }
+    [Inject] HttpClient Http { get; set; } = default!;
+
+    private bool _loading;
+    private string? _error;
+
+    public record CategoryVm(string Title, string TitlePrice, string Link, string ImageUrl, string ImageHeight);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Якщо ApiUrl не задано — працюємо як звичайний dumb-компонент на параметрах
+        if (string.IsNullOrWhiteSpace(ApiUrl)) return;
+
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var vm = await Http.GetFromJsonAsync<CategoryVm>(ApiUrl);
+            if (vm is not null)
+            {
+                Title = vm.Title;
+                TitlePrice = vm.TitlePrice;
+                Link = vm.Link;
+                ImageUrl = vm.ImageUrl;
+                ImageHight = vm.ImageHeight;
+            }
+            else
+            {
+                _error = "Empty response";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
 }
