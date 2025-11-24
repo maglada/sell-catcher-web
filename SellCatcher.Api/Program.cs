@@ -25,9 +25,10 @@ builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddControllers();
-builder.Services.AddScoped<AuthSettings>();
-builder.Services.AddScoped<JWTService>();
+builder.Services.AddSingleton<ITokenRepository, LiteDbTokenRepository>();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
+builder.Services.AddScoped<JWTService>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddAuth();
 builder.Services.AddCors(o => o.AddPolicy("LocalDev", p =>
   p.WithOrigins("http://localhost:5182")

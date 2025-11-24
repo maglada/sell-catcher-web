@@ -1,53 +1,56 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using SellCatcher.Api.Models;
-using SellCatcher.Api.DTOs;
+using SellCatcher.Api.DTOs.User;
+using SellCatcher.Api.DTOs.Token;
+using SellCatcher.Api.Services;
 
 namespace SellCatcher.Api.Services
 {
-    public class AccountService(AccountRepository accountRepository, JWTService jwtService)
+    public class AccountService
     {
+        private readonly AccountRepository _accountRepository;
+
+        public AccountService(AccountRepository accountRepository)
+        {
+            _accountRepository = accountRepository;
+        }
+
         public void Register(string? userName, string? firstName, string? lastName, string password)
         {
-            // Hash the password (for simplicity, using plain text here; use a proper hashing algorithm in production)
-            var passwordHash = password; // Replace with actual hashing
-            var account = new Account 
+            var account = new Account
             {
                 UserName = userName,
                 FirstName = firstName,
                 LastName = lastName,
-                PasswordHash = passwordHash
+                PasswordHash = string.Empty
             };
             var passwordHasher = new PasswordHasher<Account>();
             account.PasswordHash = passwordHasher.HashPassword(account, password);
 
-            accountRepository.Add(account);
+            _accountRepository.Add(account);
         }
+
         public string Login(string userName, string password)
         {
-            var account = accountRepository.GetByUserName(userName);
-            if (account == null)
-            {
-                throw new Exception("Unauthorized");
-            }
+            var account = _accountRepository.GetByUserName(userName);
+            if (account == null) throw new Exception("Unauthorized");
 
             var passwordHasher = new PasswordHasher<Account>();
-            if (string.IsNullOrEmpty(account.PasswordHash))
-            {
-                throw new Exception("Unauthorized");
-            }
+            if (string.IsNullOrEmpty(account.PasswordHash)) throw new Exception("Unauthorized");
+
             var result = passwordHasher.VerifyHashedPassword(account, account.PasswordHash, password);
-            if (result == PasswordVerificationResult.Success)
-            {
-                return jwtService.GenerateToken(account);  // generate JWT token
-            }
-            else
-            {
-                throw new Exception("Unauthorized");
-            }
+            if (result == PasswordVerificationResult.Success) return "";
+            throw new Exception("Unauthorized");
+        }
+
+        public Account? ValidateCredentialsAndGetAccount(string userName, string password)
+        {
+            var account = _accountRepository.GetByUserName(userName);
+            if (account == null) return null;
+
+            var passwordHasher = new PasswordHasher<Account>();
+            var result = passwordHasher.VerifyHashedPassword(account, account.PasswordHash, password);
+            return result == PasswordVerificationResult.Success ? account : null;
         }
     }
 }
