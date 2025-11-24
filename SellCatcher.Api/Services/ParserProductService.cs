@@ -76,7 +76,6 @@ namespace SellCatcher.Api.Services
                         /// Good creation
                         category.Products.Add(new Product
                         {
-                           
                             Name = product.Name,
                             Price = product.Price,
                             OldPrice = product.OldPrice,

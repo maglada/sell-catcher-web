@@ -16,7 +16,7 @@
 
             <p>₴@sellPrice</p>
 
-            <button>Кошик</button>
+            <button class="green-button"><img src="icons/shopping-cart.svg" /> В кошик</button>
         </div>
     </div>
 
@@ -24,17 +24,17 @@
 
 <section class="categories">
     <div class="categories-row">
-        <CategoryButtonProduct Title="АТБ" ImageUrl="images/potato.jpg" />
-        <CategoryButtonProduct Title="Novus" ImageUrl="images/potato.jpg" />
-        <CategoryButtonProduct Title="Сільпо" ImageUrl="images/potato.jpg" />
-        <CategoryButtonProduct Title="Фора" ImageUrl="images/potato.jpg" />
+        <CategoryButtonProduct Title="АТБ" ImageUrl="images/ATB.svg" ImageHight="20vh" />
+        <CategoryButtonProduct Title="Novus" ImageUrl="images/Novus.svg" ImageHight="10vh" />
+        <CategoryButtonProduct Title="Сільпо" ImageUrl="images/Silpo.svg" ImageHight="10vh" />
+        <CategoryButtonProduct Title="Фора" ImageUrl="images/Fora.svg" ImageHight="10vh" />
     </div>
 </section>
 
 @code {
-    [Parameter] public string ProductId { get; set; } // Can receive product ID from the route or query
+    [Parameter] public string ProductId { get; set; }
 
-    string name = "Product"; // Product title (temporary static value)
-    float Price = 100; // Regular price
-    float sellPrice = 50; // Discounted or sale price
+    string name = "Product";
+    float Price = 100;
+    float sellPrice = 50;
 }
