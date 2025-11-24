@@ -1,36 +1,33 @@
 .products-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 5%;
-  padding: 0px 0 0 0;
-  max-height: 700px;
-  overflow-y: auto;
-  border: 2px solid #ffffff;
+  position: relative; /* щоб sticky працювало всередині */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  width: 100%;
   border-radius: 10px;
   background: #ffffff;
+  padding-bottom: 70px; /* щоб кнопки не перекривали товари */
+  scrollbar-gutter: stable both-edges; 
+
 }
 
 .product-button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
   padding: 12px;
+  margin: 10px;
+  margin-top: 0px;
+  margin-bottom: 10px;
   border: 2px solid #e0e0e0;
   border-radius: 30px;
   background: #fff;
   cursor: pointer;
+  text-decoration: none;
   transition: 0.2s ease;
   width: 200px;
   height: 250px;
-  -webkit-border-radius: 30px;
-  -moz-border-radius: 30px;
-  -ms-border-radius: 30px;
-  -o-border-radius: 30px;
-  -webkit-transition: 0.2s ease;
-  -moz-transition: 0.2s ease;
-  -ms-transition: 0.2s ease;
-  -o-transition: 0.2s ease;
 }
 
 .product-button:hover {
@@ -58,12 +55,22 @@
 }
 
 .pagination {
+  position: sticky;
+  bottom: 0; /* прилипає до низу контейнера */
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin-top: 1rem;
+
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 16px;
+  margin-top: auto; /* штовхає вниз у flex-контейнері */
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+  z-index: 10;
 }
+
 
 .pagination button {
   border: 1px solid #ddd;
