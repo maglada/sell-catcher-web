@@ -17,11 +17,13 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpGet] /*Эндпоинт получения всех аккаунтов*/
-        public List<Account> GetAll()
+        public IActionResult GetAll()
         {
             var accounts = _accountService.GetAll();
-            return accounts;
 
+            var response = accounts.Select(a => new { a.Id, a.UserName, a.Email, a.FirstName, a.LastName });
+
+            return Ok(response);
         }
         [HttpPost] /*Эндпоинт добавления нового аккаунта*/
         public IActionResult Add([FromBody] Account account)
