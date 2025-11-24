@@ -9,20 +9,21 @@
     <div class="@Class" @onclick:stopPropagation>
         <div class="actions">
             <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
-            <label for="SignIn" class="button">Sign In</label>
+            <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
 
             <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
-            <label for="SignUp" class="button">Sign Up</label>
+            <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
         </div>
 
         @if (Enter)
         {
             <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
                 <DataAnnotationsValidator />
+                <ValidationSummary />
 
                 <div style="margin-top:10px;">
                     <label>Phone number</label><br />
-                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" />
+                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" placeholder="+380..." />
                     <ValidationMessage For="@(() => loginModel.Phone)" />
                 </div>
 
@@ -34,14 +35,7 @@
 
                 <div class="actions" style="margin-top:16px;">
                     <button type="submit" class="bottonEnter" disabled="@isBusy">
-                        @if (isBusy)
-                        {
-                            <span>Signing in...</span>
-                        }
-                        else
-                        {
-                            <span>Sign In</span>
-                        }
+                        @(isBusy ? "Signing in..." : "Sign In")
                     </button>
                 </div>
 
@@ -55,10 +49,11 @@
         {
             <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
                 <DataAnnotationsValidator />
+                <ValidationSummary />
 
                 <div style="margin-top:10px;">
                     <label>Name</label><br />
-                    <InputText class="inputInfo" @bind-Value="registerModel.Name" />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Name" placeholder="Ім'я Прізвище" />
                     <ValidationMessage For="@(() => registerModel.Name)" />
                 </div>
 
@@ -70,7 +65,7 @@
 
                 <div style="margin-top:10px;">
                     <label>Phone number</label><br />
-                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" placeholder="+380..." />
                     <ValidationMessage For="@(() => registerModel.Phone)" />
                 </div>
 
@@ -80,16 +75,15 @@
                     <ValidationMessage For="@(() => registerModel.Password)" />
                 </div>
 
+                <div style="margin-top:10px;">
+                    <label>Confirm password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.ConfirmPassword" />
+                    <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                </div>
+
                 <div class="actions" style="margin-top:16px;">
                     <button type="submit" class="bottonEnter" disabled="@isBusy">
-                        @if (isBusy)
-                        {
-                            <span>Registering...</span>
-                        }
-                        else
-                        {
-                            <span>Register</span>
-                        }
+                        @(isBusy ? "Registering..." : "Register")
                     </button>
                 </div>
 
@@ -103,8 +97,6 @@
 </div>
 
 @code {
-    private const bool UseFakeApi = false;
-
     string Class = "modal";
     bool Enter = true;
     bool isBusy = false;
@@ -134,14 +126,9 @@
     {
         error = null;
         isBusy = true;
+
         try
         {
-            if (UseFakeApi)
-            {
-                await Task.Delay(400);
-                return;
-            }
-
             var body = new LoginRequestDto
             {
                 UserName = loginModel.Phone,
@@ -155,6 +142,7 @@
                 error = "Invalid phone or password.";
                 return;
             }
+
             if (!resp.IsSuccessStatusCode)
             {
                 error = await ReadErrorAsync(resp);
@@ -173,9 +161,7 @@
                 Token = okJson.Token,
                 User = new UserInfo
                 {
-                    Id = "",
                     Name = loginModel.Phone,
-                    Email = "",
                     Phone = loginModel.Phone,
                     Role = "User"
                 }
@@ -184,6 +170,8 @@
             await PersistAuthAsync(ok);
             await OnSuccess.InvokeAsync(ok);
             await OnClose.InvokeAsync();
+
+            loginModel = new();
         }
         catch (Exception ex)
         {
@@ -199,17 +187,13 @@
     {
         error = null;
         isBusy = true;
+
         try
         {
-            if (UseFakeApi)
-            {
-                await Task.Delay(400);
-                return;
-            }
-
             var dto = ToRegisterDto(registerModel);
 
             using var resp = await Http.PostAsJsonAsync("/api/register", dto);
+
             if (!resp.IsSuccessStatusCode)
             {
                 error = await ReadErrorAsync(resp);
@@ -228,7 +212,6 @@
                 Token = okJson.Token,
                 User = new UserInfo
                 {
-                    Id = "",
                     Name = registerModel.Name,
                     Email = registerModel.Email,
                     Phone = registerModel.Phone,
@@ -239,6 +222,8 @@
             await PersistAuthAsync(ok);
             await OnSuccess.InvokeAsync(ok);
             await OnClose.InvokeAsync();
+
+            registerModel = new();
         }
         catch (Exception ex)
         {
@@ -254,13 +239,14 @@
     {
         var parts = (r.Name ?? "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var first = parts.Length > 0 ? parts[0] : "";
-        var last = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : "";
+        var last = parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : "";
 
         return new RegisterRequestDto
         {
             UserName = r.Phone,
             FirstName = first,
             LastName = last,
+            Email = r.Email,
             Password = r.Password
         };
     }
@@ -273,20 +259,8 @@
 
     private async Task<string?> ReadErrorAsync(HttpResponseMessage resp)
     {
-        try
-        {
-            var json = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("detail", out var detail))
-                return detail.GetString();
-            if (doc.RootElement.TryGetProperty("title", out var title))
-                return title.GetString();
-        }
-        catch { }
-
         var txt = await resp.Content.ReadAsStringAsync();
-        if (!string.IsNullOrWhiteSpace(txt)) return txt;
-        return $"Error {(int)resp.StatusCode}";
+        return string.IsNullOrWhiteSpace(txt) ? $"Error {(int)resp.StatusCode}" : txt;
     }
 
     private void Close() => OnClose.InvokeAsync();
@@ -294,11 +268,11 @@
 
     public sealed class LoginRequest
     {
-        [Required(ErrorMessage = "Please enter phone number")]
+        [Required]
         [StringLength(20, MinimumLength = 7)]
         public string Phone { get; set; } = "";
 
-        [Required(ErrorMessage = "Please enter password")]
+        [Required]
         [StringLength(100, MinimumLength = 6)]
         public string Password { get; set; } = "";
     }
@@ -316,6 +290,10 @@
 
         [Required, StringLength(100, MinimumLength = 6)]
         public string Password { get; set; } = "";
+
+        [Required]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
+        public string ConfirmPassword { get; set; } = "";
     }
 
     public sealed class LoginRequestDto
@@ -329,12 +307,12 @@
         public string UserName { get; set; } = "";
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
         public string Password { get; set; } = "";
     }
 
     public sealed class UserInfo
     {
-        public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string Email { get; set; } = "";
         public string Phone { get; set; } = "";

@@ -1,131 +1,232 @@
 @page "/profile"
 
+@using System.Text.Json
+@inject IJSRuntime JS
+@inject HttpClient Http
+
 <div class="profile">
-    <h2>Мої дані</h2>
-    <img src="/images/avatar.png" alt="Avatar" class="avatar" />
+    @if (User is null)
+    {
+        <h2>Ви не авторизовані</h2>
+        <p>Будь ласка, увійдіть у свій акаунт, щоб переглянути профіль.</p>
+    }
+    else
+    {
+        <h2>Мої дані</h2>
+        <img src="/images/avatar.png" alt="Avatar" class="avatar" />
 
-    <div class="info-container">
+        <div class="info-container">
 
-        <div class="info-box">
-            <p prof-text>Персональна інформація
-                <button @onclick="ToggleEdit" class="redact-button"><img src="@iconSrc" /></button><br />
-            </p>
-            <hr class="divider" />
+            <div class="info-box">
+                <p class="prof-text">
+                    Персональна інформація
+                    <button @onclick="ToggleEdit" class="redact-button">
+                        <img src="@iconSrc" />
+                    </button><br />
+                </p>
+                <hr class="divider" />
 
-            <div>
-                <p prof-text>П.І.Б:</p>
-                @if (isEditing)
-                {
-                    <input @bind="User.FullName" />
-                }
-                else
-                {
-                    <span>@User.FullName</span>
-                }
+                <div>
+                    <p class="prof-text">П.І.Б:</p>
+                    @if (isEditing)
+                    {
+                        <input @bind="User.FullName" />
+                    }
+                    else
+                    {
+                        <span>@User.FullName</span>
+                    }
+                </div><br />
+
+                <div>
+                    <p class="prof-text">Дата народження:</p>
+                    @if (isEditing)
+                    {
+                        <input type="date" @bind="User.BirthDate" />
+                    }
+                    else
+                    {
+                        <span>@User.BirthDate.ToShortDateString()</span>
+                    }
+                </div><br />
+
+                <div>
+                    <p class="prof-text">Стать:</p>
+                    @if (isEditing)
+                    {
+                        <select @bind="User.Gender">
+                            <option value="Чоловік">Чоловік</option>
+                            <option value="Жінка">Жінка</option>
+                            <option value="Інше">Інше</option>
+                        </select>
+                    }
+                    else
+                    {
+                        <span>@User.Gender</span>
+                    }
+                </div>
             </div><br />
 
-            <div>
-                <p prof-text>Дата народження:</p>
-                @if (isEditing)
-                {
-                    <input type="date" @bind="User.BirthDate" />
-                }
-                else
-                {
-                    <span>@User.BirthDate.ToShortDateString()</span>
-                }
-            </div><br />
+            <div class="info-box">
+                <p class="prof-text">Контакти</p>
+                <hr class="divider" />
 
-            <div>
-                <p prof-text>Стать:</p>
-                @if (isEditing)
-                {
-                    <select @bind="User.Gender">
-                        <option value="Чоловік">Чоловік</option>
-                        <option value="Жінка">Жінка</option>
-                        <option value="Інше">Інше</option>
-                    </select>
-                }
-                else
-                {
-                    <span>@User.Gender</span>
-                }
-            </div>
-        </div><br />
+                <div>
+                    <p class="prof-text">E-mail: </p>
+                    @if (isEditing)
+                    {
+                        <input @bind="User.Email" />
+                    }
+                    else
+                    {
+                        <span>@User.Email</span>
+                    }
+                </div><br />
 
-        <div class="info-box">
-            <p prof-text>Контакти</p>
-            <hr class="divider" />
+                <div>
+                    <p class="prof-text">Пароль: </p>
+                    @* Пароль із сервера ми не тягнемо й не зберігаємо — просто маска *@
+                    <span>********</span>
+                </div><br />
 
-            <div>
-                <p prof-text>E-mail: </p>
-                @if (isEditing)
-                {
-                    <input @bind="User.Email" />
-                }
-                else
-                {
-                    <span>@User.Email</span>
-                }
-            </div><br />
-
-            <div>
-                <p prof-text>Пароль: </p>
-                @if (isEditing)
-                {
-                    <input @bind="User.Password" />
-                }
-                else
-                {
-                    <span>@User.Password</span>
-                }
-            </div><br />
-
-            <div>
-                <p prof-text>Мобільний телефон: </p>
-                @if (isEditing)
-                {
-                    <input @bind="User.Phone" />
-                }
-                else
-                {
-                    <span>@User.Phone</span>
-                }
+                <div>
+                    <p class="prof-text">Мобільний телефон: </p>
+                    @if (isEditing)
+                    {
+                        <input @bind="User.Phone" />
+                    }
+                    else
+                    {
+                        <span>@User.Phone</span>
+                    }
+                </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 @code {
     private bool isEditing = false;
-    private string buttonText = "Змінити";
     private string iconSrc = "icons/pencil.svg";
 
-    private UserInfo User = new UserInfo
+    // Те, що показуємо на сторінці
+    private UserProfile? User;
+
+    // username, з яким ходимо в /api/accounts/{username}
+    private string? currentUserName;
+
+    protected override async Task OnInitializedAsync()
     {
-        FullName = "Прізвище Ім'я По-батькові",
-        BirthDate = DateTime.Now,
-        Gender = "Невідомо",
-        Email = "email@gmail.com",
-        Phone = "+380 67 123 45 67",
-        Password = "12345678a"
-    };
+        await LoadUserFromLocalStorageAndApiAsync();
+    }
+
+    private async Task LoadUserFromLocalStorageAndApiAsync()
+    {
+        try
+        {
+            // 1) Читаємо того юзера, якого зберігали в модалці (AuthResult.User)
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user");
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                User = null;
+                return;
+            }
+
+            var stored = JsonSerializer.Deserialize<StoredUserInfo>(json);
+            if (stored is null)
+            {
+                User = null;
+                return;
+            }
+
+            currentUserName = stored.Phone ?? stored.Email ?? stored.Name;
+
+            // 2) Базовий профіль із того, що знаємо з localStorage
+            var profile = new UserProfile
+            {
+                FullName = string.IsNullOrWhiteSpace(stored.Name) ? "Без імені" : stored.Name,
+                Email = stored.Email ?? "",
+                Phone = stored.Phone ?? "",
+                BirthDate = DateTime.Now,
+                Gender = "Невідомо"
+            };
+
+            if (!string.IsNullOrWhiteSpace(currentUserName))
+            {
+                try
+                {
+                    // /api/accounts/{username}
+                    var account = await Http.GetFromJsonAsync<AccountDto>($"api/accounts/{Uri.EscapeDataString(currentUserName)}");
+                    if (account is not null)
+                    {
+                        var fullName = BuildFullName(account.FirstName, account.LastName);
+                        if (!string.IsNullOrWhiteSpace(fullName))
+                            profile.FullName = fullName;
+
+                        // Якщо Email з аккаунта є – використовуємо його
+                        if (!string.IsNullOrWhiteSpace(account.Email))
+                            profile.Email = account.Email;
+                    }
+                }
+                catch
+                {
+                    // Якщо немає такого акаунта або ще не створений — просто залишаємо те, що було у localStorage
+                }
+            }
+
+            User = profile;
+        }
+        catch
+        {
+            User = null;
+        }
+    }
+
+    private static string BuildFullName(string? first, string? last)
+    {
+        first ??= "";
+        last ??= "";
+        var combined = (first + " " + last).Trim();
+        return string.IsNullOrWhiteSpace(combined) ? "" : combined;
+    }
 
     private void ToggleEdit()
     {
+        if (User is null)
+            return;
+
         isEditing = !isEditing;
-        buttonText = isEditing ? "Зберегти" : "Змінити";
         iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg";
+
     }
 
-    // Class representing user profile data
-    public class UserInfo
+    // Локальна модель для UI
+    public class UserProfile
     {
-        public string FullName { get; set; }
-        public DateTime BirthDate { get; set; }
-        public string Gender { get; set; }
-        public string Password { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
+        public string FullName { get; set; } = "Без імені";
+        public DateTime BirthDate { get; set; } = DateTime.Now;
+        public string Gender { get; set; } = "Невідомо";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+    }
+
+    // Те, що лежить у localStorage як auth_user (із модалки логіна/реєстрації)
+    private sealed class StoredUserInfo
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string? Role { get; set; }
+    }
+
+    private sealed class AccountDto
+    {
+        public string Id { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? Email { get; set; }
     }
 }
