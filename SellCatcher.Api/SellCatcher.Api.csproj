@@ -12,6 +12,7 @@
     <PackageReference Include="LiteDB" Version="6.0.0-prerelease.65" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
 	<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
 	<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.6" />
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />

@@ -1,59 +1,49 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using LiteDB;
-using Microsoft.AspNetCore.Identity;
 using SellCatcher.Api.Models;
 
 namespace SellCatcher.Api.Services
 {
-    public class AccountRepository
+    public class AccountRepository : IDisposable
     {
-        private readonly string _dbPath;
+        private readonly LiteDatabase _db;
+        private readonly ILiteCollection<Account> _col;
 
-        public AccountRepository()
+        public AccountRepository(string dbPath = "sellcatcher.db")
         {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            _db = new LiteDatabase(dbPath);
+            _col = _db.GetCollection<Account>("accounts");
+            // Используем автоинкремент для Id
+            _col.EnsureIndex(x => x.Id);
+            _col.EnsureIndex(x => x.UserName, true);
+        }
 
-            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+        public Account? GetByUserName(string userName)
+        {
+            if (string.IsNullOrEmpty(userName)) return null;
+            return _col.FindOne(x => x.UserName == userName);
+        }
 
-            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
+        public Account? GetById(Guid id)
+        {
+            return _col.FindById(id);
         }
 
         public void Add(Account account)
         {
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Account>("accounts");
-            var inBase = col.FindOne(a => a.UserName == account.UserName);
-            if (inBase != null)
-            {
-                account.Id = inBase.Id;
-                col.Update(account);
-            }
-            else
-            {
-                col.Insert(account);
-            }
-        }
-        public Account? GetByUserName(string userName)
-        {
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Account>("accounts");
-            return col.FindOne(a => a.UserName == userName);
+            // Если Id == 0, LiteDB поставит новый авто-id
+            _col.Insert(account);
         }
 
-        public Account? GetByEmail(string email)
+        public void Update(Account account)
         {
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Account>("accounts");
-            return col.FindOne(a => a.Email == email);
+            _col.Update(account);
         }
-        public List<Account> GetAll(){
-            using var db = new LiteDatabase(_dbPath);
-            var col = db.GetCollection<Account>("accounts");
-            return col.FindAll().ToList();
+
+        public void Delete(int id)
+        {
+            _col.Delete(id);
         }
+
+        public void Dispose() => _db?.Dispose();
     }
 }
-      

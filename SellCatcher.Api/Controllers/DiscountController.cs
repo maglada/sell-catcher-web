@@ -20,51 +20,54 @@ namespace SellCatcher.Api.Controllers
         [HttpGet] /*Эндпоинт получения всех скидок*/
         public IActionResult GetAll()
         {
-            var discounts = _discountService.GetAll();
-            if (discounts == null) return NotFound();
-            return Ok(discounts);
+           var discounts = _discountService.GetAll();
+           return Ok(discounts);
         }
 
         [HttpGet("store/{storeId}")] /*Эндпоинт получения скидок по магазину*/
         public IActionResult GetByStore(int storeId)
         {
-            var discounts = _discountService.GetByStore(storeId);
-            if (discounts == null) return NotFound();
-            return Ok(discounts);
+           var discounts = _discountService.GetByStore(storeId);
+           return Ok(discounts);
         }
 
-        [HttpGet("{id}")] /*Эндпоинт получения скидки по ID*/
+        [HttpGet("{id:guid}")] /*Эндпоинт получения скидки по ID*/
         public IActionResult GetById(Guid id)
         {
-            var discount = _discountService.GetById(id);
-            if (discount == null) return NotFound();
-            return Ok(discount);
+           var discount = _discountService.GetById(id);
+           if (discount == null) return NotFound();
+           return Ok(discount);
         }
 
         [HttpGet("active")] /*Эндпоинт получения активных скидок*/
         public IActionResult GetActiveDiscounts()
         {
-            var active = _discountService
-                .GetAll()
-                .Where(d => d.ValidUntil >= DateTime.UtcNow);
-            return Ok(active);
+           var active = _discountService
+               .GetAll()
+               .Where(d => d.ValidUntil >= DateTime.UtcNow);
+           return Ok(active);
         }
         [HttpGet("store/{storeId}/active")] /*Эндпоинт получения активных скидок по магазину*/
         public IActionResult GetDiscountsStore(int storeId)
         {
-            var discounts = _discountService
-                .GetByStore(storeId)
-                .Where(d => d.ValidUntil >= DateTime.UtcNow);
-            return Ok(discounts);
+           var discounts = _discountService
+               .GetByStore(storeId)
+               .Where(d => d.ValidUntil >= DateTime.UtcNow);
+           return Ok(discounts);
         }
         [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
         public IActionResult GetTopDeals()
         {
-            var topDeals = _discountService
-                .GetAll()
-                .OrderByDescending(d => d.OldPrice - d.Price)
-                .Take(3);
-            return Ok(topDeals);
+           var topDeals = _discountService.GetAll()
+               .OrderByDescending(d => d.OldPrice - d.Price)
+               .Take(2);
+           return Ok(topDeals);
+        }
+         [HttpGet("products")] /*Эндпоинт получения всех товаров*/
+        public IActionResult GetAllProducts()
+        {
+            var products = _discountService.GetAll();
+            return Ok(products);
         }
     }
 }
