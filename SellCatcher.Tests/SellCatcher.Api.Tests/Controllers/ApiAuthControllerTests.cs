@@ -1,151 +1,209 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using NUnit.Framework.Legacy;
+using Moq;
+using SellCatcher.Api.Controllers;
+using SellCatcher.Api.DTOs;
+using SellCatcher.Api.DTOs.Token;
+using SellCatcher.Api.DTOs.User;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-/***
-При помилці шляху бази даних потрібно змінити шлях в AccountRepository.cs
-private readonly string _dbPath;
-
-        public AccountRepository()
-        {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
-
-            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
-        }
-
-***/
 
 namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
 {
     [TestFixture]
     public class ApiAuthControllerTests
     {
-        private AccountRepository accountRepository;
-        private JWTService jwtService;
-        private AccountService accountService;
+
+        private Mock<ITokenRepository> _mockTokenRepo;
+        private AccountRepository _accountRepository;
+        private AccountService _accountService;
+        private JWTService _jwtService;
+        private RefreshTokenService _refreshTokenService;
+        private AuthController _authController;
+        private AuthSettings _authSettings;
+        private Account _testAccount;
+
+        private const string TestDbPath = "test_auth.db";
+        private const string ValidUsername = "testuser";
+        private const string ValidPassword = "Test@123";
+        private const string ValidFirstName = "John";
+        private const string ValidLastName = "Doe";
+        private const string ValidEmail = "john@test.com";
+        private const string InvalidPassword = "wrongpassword";
+        private const string NonExistentUser = "ghost_user";
+
+
+
         [SetUp]
         public void Setup()
         {
-            // Встановлюємо JWT секретний ключ для тестів
-            Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "this-is-a-test-secret-key-with-at-least-32-characters-long");
+            // Налаштування
+            _authSettings = new AuthSettings
+            {
+                SecretKey = "super-secret-key-for-testing-must-be-at-least-32-chars",
+                TokenLifetime = TimeSpan.FromMinutes(15),
+                RefreshTokenLifetime = TimeSpan.FromDays(10)
+            };
+            var options = Options.Create(_authSettings);
 
-            // Ініціалізуємо сервіси
-            accountRepository = new AccountRepository();
-            jwtService = new JWTService();
-            accountService = new AccountService(accountRepository, jwtService);
+            // Mock для ITokenRepository
+            _mockTokenRepo = new Mock<ITokenRepository>();
+            SetupTokenRepositoryMock();
+
+
+            _accountRepository = new AccountRepository(TestDbPath);
+            _accountService = new AccountService(_accountRepository);
+            _jwtService = new JWTService(options);
+            _refreshTokenService = new RefreshTokenService(_mockTokenRepo.Object, _jwtService, options);
+
+
+            _authController = new AuthController(
+                _accountService,
+                _refreshTokenService,
+                _mockTokenRepo.Object,
+                _accountRepository,
+                _jwtService
+            );
+
+            // Створюємо тестового юзера
+            CreateTestAccount();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _accountRepository?.Dispose();
+
+            if (File.Exists(TestDbPath))
+                File.Delete(TestDbPath);
         }
 
 
 
-
-        //Тест на правильний пароль 
-        [Test]
-        public void Login_WithTheCorrectPasswordForRealUser_ReturnsTokenForCorrectUsername()
+        private void SetupTokenRepositoryMock()
         {
-            // Arrange
-            string expectedUsername = "testusername";
-            string password = "testpassword";
-            
-            Account testAccount = new Account
+            // Зберігаємо токени в пам'яті для тестів
+            var storedTokens = new Dictionary<string, RefreshToken>();
+            var blacklist = new HashSet<string>();
+
+            _mockTokenRepo
+                .Setup(x => x.SaveRefreshTokenAsync(It.IsAny<RefreshToken>()))
+                .Callback<RefreshToken>(token => storedTokens[token.Token] = token)
+                .Returns(Task.CompletedTask);
+
+            _mockTokenRepo
+                .Setup(x => x.GetRefreshTokenAsync(It.IsAny<string>()))
+                .ReturnsAsync((string token) =>
+                    storedTokens.TryGetValue(token, out var t) ? t : null);
+
+            _mockTokenRepo
+                .Setup(x => x.RevokeRefreshTokenAsync(It.IsAny<string>(), It.IsAny<string?>()))
+                .Callback<string, string?>((token, replacedBy) =>
+                {
+                    if (storedTokens.TryGetValue(token, out var t))
+                    {
+                        t.Revoked = true;
+                        t.ReplacedBy = replacedBy;
+                    }
+                })
+                .Returns(Task.CompletedTask);
+
+            _mockTokenRepo
+                .Setup(x => x.AddToBlacklistAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string?>()))
+                .Callback<string, DateTime, string?>((id, _, _) => blacklist.Add(id))
+                .Returns(Task.CompletedTask);
+
+            _mockTokenRepo
+                .Setup(x => x.IsBlacklistedAsync(It.IsAny<string>()))
+                .ReturnsAsync((string id) => blacklist.Contains(id));
+        }
+
+        private void CreateTestAccount()
+        {
+            _testAccount = new Account
             {
-                UserName = expectedUsername,
-                FirstName = "Test",
-                LastName = "User"
+                UserName = ValidUsername,
+                FirstName = ValidFirstName,
+                LastName = ValidLastName,
+                PasswordHash = string.Empty
             };
 
-            var passwordHasher = new PasswordHasher<Account>();
-            testAccount.PasswordHash = passwordHasher.HashPassword(testAccount, password);
-
-            accountRepository.Add(testAccount);  
-
-            // Act
-            string token = accountService.Login(expectedUsername, password);
-
-            // Assert
-            Assert.That(token, Is.Not.Null, "Token should not be null for valid credentials");
-            Assert.That(token, Is.Not.Empty, "Token should not be empty");
-
-       }
+            var hasher = new PasswordHasher<Account>();
+            _testAccount.PasswordHash = hasher.HashPassword(_testAccount, ValidPassword);
+            _accountRepository.Add(_testAccount);
+        }
 
 
 
-
-        //Тест на НЕ правильний пароль
         [Test]
-        public void Login_WithTheINCorrectPasswordForRealUser_ReturnsError()
+        public void Register_ValidData_ReturnsOk()
         {
             // Arrange
-            string expectedUsername = "testusername";
-            string password = "testpassword";
-            string wrongPassword = "wrongpassword";
-            
-            Account testAccount = new Account
+            var request = new RegisterRequestDto
             {
-                UserName = expectedUsername,
-                FirstName = "Test",
-                LastName = "User"
+                UserName = "newuser",
+                FirstName = "New",
+                LastName = "User",
+                Password = "NewUser@123"
+            };
+            // Act
+            var result = _authController.Register(request) as OkObjectResult;
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.StatusCode, Is.EqualTo(200));
+            Assert.That(result.Value.ToString().Contains("Registration successful"), Is.True);
+        }
+        [Test]
+        public async Task Login_ValidCredentials_ReturnsTokens()
+        {
+            // Arrange
+            var request = new LoginRequestDto
+            {
+                UserName = ValidUsername,
+                Password = ValidPassword
+            };
+            // Act
+            var result = await _authController.Login(request) as OkObjectResult;
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.StatusCode, Is.EqualTo(200));
+            var tokens = result.Value as TokenResponseDto;
+            Assert.That(tokens, Is.Not.Null);
+            Assert.That(tokens.AccessToken, Is.Not.Null.And.Not.Empty);
+            Assert.That(tokens.RefreshToken, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public async Task Login_InvalidPassword_ReturnsUnauthorized()
+        {
+            // Arrange
+            var request = new LoginRequestDto
+            {
+                UserName = ValidUsername,
+                Password = InvalidPassword
+            };
+            // Act
+            var result = await _authController.Login(request) as UnauthorizedResult;
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.StatusCode, Is.EqualTo(401));
+
+        }
+        [Test]
+        public async Task LoginWithNonExistingUser_ReturnsUnauthorized() {
+            var request = new LoginRequestDto
+            {
+                UserName = NonExistentUser,
+                Password = ValidPassword
             };
 
-            var passwordHasher = new PasswordHasher<Account>();
-            testAccount.PasswordHash = passwordHasher.HashPassword(testAccount, password);
+            var result = await _authController.Login(request) as UnauthorizedResult;
 
-            accountRepository.Add(testAccount);
-
-            // Act
-            var ex = Assert.Throws<Exception>(() => accountService.Login(expectedUsername, wrongPassword));
-
-            // Assert
-            Assert.That(ex.Message, Is.EqualTo("Unauthorized"));//ХЕШЕР Паролів повертає "Unauthorized"
-
-        }
-
-
-
-        //тест на неіснуючого юзера
-        [Test]
-        public void Login_WithTheINCorrectUser()
-        {
-            // Arrange
-            string expectedUsername = "testusername";
-            string password = "testpassword";
-            string wrongPassword = "wrongpassword";
-
-            // Act
-            var ex = Assert.Throws<Exception>(() => accountService.Login(expectedUsername, wrongPassword));
-
-            // Assert
-            Assert.That(ex.Message, Is.EqualTo("Unauthorized"));//Репозиторій повертає "Unauthorized"
-
-        }
-
-
-        //Тест на реєстрацію юзера
-        [Test]
-        public void Successful_Registration()
-        {
-            // Arrange
-            string expectedUsername = "newuser";
-            string password = "password";
-            string firstName = "New";
-            string lastName = "User";
-            // Act
-            accountService.Register(expectedUsername, firstName, lastName, password);
-            var registeredAccount = accountRepository.GetByUserName(expectedUsername);
-            // Assert
-            Assert.That(registeredAccount, Is.Not.Null, "Registered account should not be null");
-            Assert.That(registeredAccount.UserName, Is.EqualTo(expectedUsername), "Usernames should match");
-            Assert.That(registeredAccount.FirstName, Is.EqualTo(firstName), "First names should match");
-            Assert.That(registeredAccount.LastName, Is.EqualTo(lastName), "Last names should match");
-            Assert.That(registeredAccount.PasswordHash, Is.Not.Null.Or.Empty, "Password hash should not be null or empty");
-        }
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.StatusCode, Is.EqualTo(401));
+        } 
     }
 }
