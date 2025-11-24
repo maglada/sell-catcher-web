@@ -20,9 +20,8 @@ namespace SellCatcher.Api.Controllers
         [HttpGet] /*Эндпоинт получения всех скидок*/
         public IActionResult GetAll()
         {
-            var discounts = _discountService.GetAll();
-            if (discounts == null) return NotFound();
-            return Ok(discounts);
+           var discounts = _discountService.GetAll();
+           return Ok(discounts);
         }
 
         [HttpGet("store/{storeId}")] /*Эндпоинт получения скидок по магазину*/
@@ -43,18 +42,18 @@ namespace SellCatcher.Api.Controllers
         [HttpGet("active")] /*Эндпоинт получения активных скидок*/
         public IActionResult GetActiveDiscounts()
         {
-            var active = _discountService
-                .GetAll()
-                .Where(d => d.ValidUntil >= DateTime.UtcNow);
-            return Ok(active);
+           var active = _discountService
+               .GetAll()
+               .Where(d => d.ValidUntil >= DateTime.UtcNow);
+           return Ok(active);
         }
         [HttpGet("store/{storeId}/active")] /*Эндпоинт получения активных скидок по магазину*/
         public IActionResult GetDiscountsStore(int storeId)
         {
-            var discounts = _discountService
-                .GetByStore(storeId)
-                .Where(d => d.ValidUntil >= DateTime.UtcNow);
-            return Ok(discounts);
+           var discounts = _discountService
+               .GetByStore(storeId)
+               .Where(d => d.ValidUntil >= DateTime.UtcNow);
+           return Ok(discounts);
         }
         [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
         public IActionResult GetTopDeals()
