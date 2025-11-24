@@ -19,5 +19,6 @@ namespace SellCatcher.Api.Services
 
         public IEnumerable<Store> GetAll() => _stores;
         public Store? GetById(int id) => _stores.FirstOrDefault(s => s.Id == id);
+        public Store? GetByName(string name) => _stores.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 }

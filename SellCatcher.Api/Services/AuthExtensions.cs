@@ -1,21 +1,37 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using SellCatcher.Api.Models;
+using System;
+using System.Text;
+using Microsoft.Extensions.Options;
 
 namespace SellCatcher.Api.Services
 {
     public static class AuthExtensions
     {
-        public static IServiceCollection AddAuth(this IServiceCollection services)
+        public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration configuration)
         {
-            var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
-            var tokenLifetimeStr = Environment.GetEnvironmentVariable("TOKEN_LIFETIME");
+            // Получаем конфигурационную секцию явно
+            var section = configuration.GetSection(nameof(AuthSettings));
+            if (!section.Exists())
+            {
+                throw new InvalidOperationException($"Configuration section '{nameof(AuthSettings)}' is missing. Please add it to appsettings.json.");
+            }
 
-            if (string.IsNullOrEmpty(secretKey))
-                throw new InvalidOperationException("JWT_SECRET_KEY environment variable is missing!");
+            // Регистрируем IOptions<AuthSettings>
+            services.Configure<AuthSettings>(section);
 
-            if (!TimeSpan.TryParse(tokenLifetimeStr, out var tokenLifetime))
-                tokenLifetime = TimeSpan.FromMinutes(30);
+            // Регистрируем конкретный экземпляр AuthSettings (получаем через IOptions)
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<AuthSettings>>().Value);
+
+            // Получим экземпляр для дальнейшей настройки (через провайдер — безопасно)
+            var authSettings = section.Get<AuthSettings>();
+            if (authSettings == null)
+            {
+                throw new InvalidOperationException($"Failed to bind '{nameof(AuthSettings)}' section.");
+            }
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -26,8 +42,25 @@ namespace SellCatcher.Api.Services
                         ValidateAudience = false,
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.SecretKey)),
                         ClockSkew = TimeSpan.Zero
+                    };
+
+                    // пример проверки blacklist (если у вас ITokenRepository зарегистрирован)
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnTokenValidated = async ctx =>
+                        {
+                            var tokenRepo = ctx.HttpContext.RequestServices.GetService<ITokenRepository>();
+                            if (tokenRepo != null)
+                            {
+                                var jti = ctx.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
+                                if (!string.IsNullOrEmpty(jti) && await tokenRepo.IsBlacklistedAsync(jti))
+                                {
+                                    ctx.Fail("Token revoked");
+                                }
+                            }
+                        }
                     };
                 });
 
