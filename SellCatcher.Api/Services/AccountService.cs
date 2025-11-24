@@ -9,23 +9,24 @@ namespace SellCatcher.Api.Services
     public class AccountService
     {
         private readonly AccountRepository _accountRepository;
+        private readonly PasswordHasher<Account> _hasher = new();
 
         public AccountService(AccountRepository accountRepository)
         {
             _accountRepository = accountRepository;
         }
 
-        public void Register(string? userName, string? firstName, string? lastName, string password)
+        public void Register(string? userName, string email, string? firstName, string? lastName, string password)
         {
             var account = new Account
             {
                 UserName = userName,
+                Email = email,
                 FirstName = firstName,
                 LastName = lastName,
-                PasswordHash = string.Empty
             };
-            var passwordHasher = new PasswordHasher<Account>();
-            account.PasswordHash = passwordHasher.HashPassword(account, password);
+
+            account.PasswordHash = _hasher.HashPassword(account, password);
 
             _accountRepository.Add(account);
         }

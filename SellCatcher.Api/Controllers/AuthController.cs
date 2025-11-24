@@ -34,8 +34,9 @@ namespace SellCatcher.Api.Controllers
         [HttpPost("register")]
         public IActionResult Register([FromBody] RegisterRequestDto request)
         {
-            _accountService.Register(request.UserName, request.FirstName, request.LastName, request.Password);
-            return Ok(new { Message = "Registration successful" });
+            _accountService.Register(request.UserName, request.Email, request.FirstName, request.LastName, request.Password);
+
+            return Ok(new { Message = "Registration successful"});
         }
 
         [HttpPost("login")]
