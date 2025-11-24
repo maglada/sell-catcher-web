@@ -24,10 +24,12 @@
 
 
 .sell-price{
+    color:black;
+    text-decoration:line-through;
     text-align: center;
-    width: 40px;
+    padding:5px;
     background-color: lightgrey;
-    border-radius: 10px;
+    border-radius: 2vh;
 }
 
 .info-container {
@@ -61,5 +63,11 @@
     flex-wrap: wrap;
     justify-content: center;
     margin-top: -120px;
+}
+
+.price{
+    font-weight: 550;
+    font-size:4vh;
+    color:rgb(240, 138, 0);
 }
 

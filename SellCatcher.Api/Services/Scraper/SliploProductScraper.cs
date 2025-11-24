@@ -149,11 +149,26 @@ namespace ProductScraper
                         prod.Name = $"{prod.Name} ({w})";
                     }
 
+                    // Get image url 
+                    var imgEl = await el.QuerySelectorAsync("a.product-card__link img");
+                    string? imgSrc = null;
+                    if (imgEl != null)
+                    {
+                        // Try src first, then data-src for lazy loading
+                        imgSrc = await imgEl.GetAttributeAsync("src") ?? await imgEl.GetAttributeAsync("data-src") ?? "";
+                        prod.ImageUrl = imgSrc;
+
+                        if (string.IsNullOrEmpty(imgSrc))
+                        {
+                            Console.WriteLine($"WARNING: No image URL found for {prod.Name}");
+                        }
+                    }
+
                     if (!string.IsNullOrWhiteSpace(prod.Name))
                     {
                         products.Add(prod);
 
-                        Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
+                        Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn. URL to image is - {imgSrc}");
 
                         if (prod.IsBulk)
                             Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");

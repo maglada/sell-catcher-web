@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Playwright;
 using System;
 using System.Collections.Generic;
@@ -64,19 +65,25 @@ namespace ProductScraper
             }
 
             /// Start parsing for all links
-            products = await ScrapeCatalogsInParallelAsync(catalogUrls, context);
+            var result = await ScrapeCatalogsInParallelAsync(catalogUrls, context);
+
             await context.CloseAsync();
-            return products;
+            return result;
         }
 
         /// <summary>
         /// Scrapes a single catalog page and extracts all products
         /// </summary>
-        private async Task<List<Product>> ScrapeCatalogPageAsync(IPage page, string catalogUrl)
+        private async Task<List<Product>> ScrapeCatalogPageAsync(IPage page, string url)
         {
             var products = new List<Product>();
+            // Product container selectors
+            var selectors = new[]
+            {
+                "[data-testid*='product-tile'], .ProductTile, .ProductTileLink"
+            };
 
-            await page.GotoAsync(catalogUrl);
+            await page.GotoAsync(url);
             await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
             // Fetch the full HTML for debugging/inspection
@@ -88,105 +95,137 @@ namespace ProductScraper
             if (_config.SaveDebugScreenshots)
                 await page.ScreenshotAsync(new() { Path = $"debug_{DateTime.Now:yyyyMMddHHmmss}.png", FullPage = true });
 
-            // Try to find product elements by multiple selector variations
-            var productElements = await page.QuerySelectorAllAsync(
-                "[data-testid*='product-tile'], .ProductTile, .ProductTileLink"
-            );
+            IElementHandle[] els = Array.Empty<IElementHandle>();
+            foreach (var sel in selectors)
+            {
+                var items = await page.QuerySelectorAllAsync(sel);
+                if (items.Count > 0) { els = items.ToArray(); break; }
+            }
 
-            /// Processing each product
-            var tasks = productElements.Select(async product =>
+            foreach (var el in els)
             {
                 try
                 {
+                    var prod = new Product { Category = _category };
+
                     /// Extract name
-                    var nameSel = await product.QuerySelectorAsync("[data-testid='product_tile_title']");
-                    var name = nameSel != null ? (await nameSel.InnerTextAsync())?.Trim() : "";
+                    var nameSel = await el.QuerySelectorAsync("[data-testid='product_tile_title']");
+                    if (nameSel != null)
+                        prod.Name = (await nameSel.InnerTextAsync())?.Trim() ?? "";
+                    else
+                        continue;
 
                     /// Extract price
-                    var priceSel = await product.QuerySelectorAsync("[data-marker='Discounted Price'] span.Price__value_body") ??
-                                  await product.QuerySelectorAsync(".Price__value_caption") ??
-                                  await product.QuerySelectorAsync(".Price__value_unavailable") ??
-                                  await product.QuerySelectorAsync(".Price__value_discount");
-                    var newPrice = priceSel != null ? (await priceSel.InnerTextAsync())?.Trim() : "";
+                    var priceSel = await el.QuerySelectorAsync("[data-marker='Discounted Price'] span.Price__value_body") ??
+                                  await el.QuerySelectorAsync(".Price__value_caption") ??
+                                  await el.QuerySelectorAsync(".Price__value_unavailable") ??
+                                  await el.QuerySelectorAsync(".Price__value_discount");
+                    if (priceSel != null)
+                    {
+                        var priceText = (await priceSel.InnerTextAsync())?.Trim() ?? "";
+                        var m = Regex.Match(priceText, @"(\d+(?:[.,]\d+)?)");
+                        if (m.Success) prod.Price = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                    }
 
                     /// Extract old price
-                    var oldPriceSel = await product.QuerySelectorAsync("[data-marker='Old Price'] span.Price__value_body") ??
-                                     await product.QuerySelectorAsync(".ProductTile_oldPrice span") ??
-                                     await product.QuerySelectorAsync(".Price__value_old");
-                    var nonDiscountPrice = oldPriceSel != null ? (await oldPriceSel.InnerTextAsync())?.Trim() : "";
+                    var oldPriceSel = await el.QuerySelectorAsync("[data-marker='Old Price'] span.Price__value_body") ??
+                                     await el.QuerySelectorAsync(".ProductTile_oldPrice span") ??
+                                     await el.QuerySelectorAsync(".Price__value_old");
+                    if (oldPriceSel != null)
+                    {
+                        var oldPriceText = (await oldPriceSel.InnerTextAsync())?.Trim() ?? "";
+                        var m = Regex.Match(oldPriceText, @"(\d+(?:[.,]\d+)?)");
+                        if (m.Success)
+                        {
+                            prod.OldPrice = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                            prod.IsOnSale = prod.OldPrice > prod.Price;
+                        }
+                    }
 
                     /// Extract percent of discount
-                    var discountSel = await product.QuerySelectorAsync("[data-marker='Discount']") ??
-                                     await product.QuerySelectorAsync(".DiscountBadge") ??
-                                     await product.QuerySelectorAsync("[class*='discount']") ??
-                                     await product.QuerySelectorAsync("[class*='Discount']");
-
-                    string discount = "";
+                    var discountSel = await el.QuerySelectorAsync("[data-marker='Discount']") ??
+                                     await el.QuerySelectorAsync(".DiscountBadge") ??
+                                     await el.QuerySelectorAsync("[class*='discount']") ??
+                                     await el.QuerySelectorAsync("[class*='Discount']");
                     if (discountSel != null)
                     {
                         var discountText = (await discountSel.InnerTextAsync())?.Trim() ?? "";
                         var match = Regex.Match(discountText, @"[+\-]?\d+\s*%");
                         if (match.Success)
-                            discount = match.Value.Trim();
+                            prod.Discount = match.Value.Trim();
+                    }
+
+                    /// Extract bulk price
+                    var bulkPriceSel = await el.QuerySelectorAsync("[data-marker^='PriceWholesale_']");
+                    if (bulkPriceSel != null)
+                    {
+                        var bulkText = (await bulkPriceSel.InnerTextAsync())?.Trim() ?? "";
+
+                        var match = Regex.Match(bulkText, @"([\d.,]+)\s*₴");
+                        if (match.Success)
+                        {
+                            var priceStr = match.Groups[1].Value.Replace(',', '.');
+                            prod.BulkPrice = decimal.Parse(priceStr, CultureInfo.InvariantCulture);
+                            prod.IsBulk = true;
+                        }
                     }
 
                     /// Extract discount period
                     string validUntil = "";
-                    var validUntilSel = await product.QuerySelectorAsync("[data-marker='Promotion_until_date']");
+
+                    var validUntilSel = await el.QuerySelectorAsync("[data-marker='Promotion_until_date'] ");
                     if (validUntilSel != null)
-                        validUntil = (await validUntilSel.InnerTextAsync())?.Replace("до", "").Trim() ?? "";
+                    {
+                        validUntil = (await validUntilSel.InnerTextAsync())?
+                            .Replace("до", "")
+                            .Trim() ?? "";
+                    }
+                    if (string.IsNullOrWhiteSpace(prod.Discount))
+                        validUntil = "";
 
-                    if (string.IsNullOrWhiteSpace(discount))
-                        nonDiscountPrice = "";
-
-                    /// Removing blanks, punctuation marks and other rubbish
-                    string CleanPrice(string p) => p.Replace(" ", "").Replace(",", ".").Replace("₴", "").Trim();
-
-                    var cleanedNewPrice = CleanPrice(newPrice);
-                    var cleanedOldPrice = CleanPrice(nonDiscountPrice);
-
-                    if (!decimal.TryParse(cleanedNewPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
-                        return;
-
-                    decimal? oldPrice = null;
-                    if (decimal.TryParse(cleanedOldPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal priceOld))
-                        oldPrice = priceOld;
-
-                    /// Convert string to date
                     DateTime? trueValidUntil = null;
-                    if (DateTime.TryParseExact(validUntil, "dd.MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+
+                    if (DateTime.TryParseExact(validUntil, "dd.MM", CultureInfo.InvariantCulture,
+                                               DateTimeStyles.None, out var dt))
                     {
                         dt = new DateTime(DateTime.Now.Year, dt.Month, dt.Day);
+
                         if (dt < DateTime.Now)
                             dt = dt.AddYears(1);
+
                         trueValidUntil = dt;
                     }
 
-                    /// Object formation
-                    var p = new Product
+                    prod.ValidUntil = trueValidUntil;
+
+                    /// Extract img
+                    var img = await el.QuerySelectorAsync("div[class*='jsx-12c0bb202e78d6b5 ProductTile__imageContainer'] img");
+
+                    string? imgUrl = null;
+                    if (img is not null)
                     {
-                        Name = name,
-                        Price = price,
-                        OldPrice = oldPrice,
-                        Discount = discount,
-                        IsOnSale = !string.IsNullOrEmpty(discount) || oldPrice.HasValue,
-                        ValidUntil = trueValidUntil,
-                        Category = _category
-                    };
+                        imgUrl = await img.GetAttributeAsync("src") ?? await img.GetAttributeAsync("data-src");
+                    }
 
-                    /// Add to public list in parallel mode
-                    lock (products)
-                        products.Add(p);
+                    prod.ImageUrl = imgUrl ?? "";
 
-                    Console.WriteLine($"Added: {p.Name} — {p.Price}₴ {(p.IsOnSale ? "(ALARM! It`s SALE)" : "")}");
+                    if (!string.IsNullOrWhiteSpace(prod.Name))
+                    {
+                        products.Add(prod);
+
+                        Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn");
+
+                        Console.WriteLine($"Source: {prod.ImageUrl}");
+
+                        if (prod.IsBulk)
+                            Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");
+
+                        if (prod.IsOnSale)
+                            Console.WriteLine($"It`s a SALE: {prod.OldPrice}grn → {prod.Price}grn ({prod.Discount})");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to add product: {ex.Message}");
-                }
-            });
-            await Task.WhenAll(tasks);
-            Console.WriteLine($"Total products added: {products.Count}");
+                catch { }
+            }
             return products;
         }
 
@@ -197,40 +236,29 @@ namespace ProductScraper
         /// <param name="catalogUrls">A list of catalog page URLs to scrape</param>
         /// <param name="context">An existing Playwright browser context used to create new pages</param>
         /// <returns>Сombined list of objects extracted from all provided URLs</returns>
-        private async Task<List<Product>> ScrapeCatalogsInParallelAsync(List<string> catalogUrls, IBrowserContext context)
+        private async Task<List<Product>> ScrapeCatalogsInParallelAsync(List<string> urls, IBrowserContext context)
         {
-            var allProducts = new List<Product>();
+            var all = new List<Product>();
             var semaphore = new SemaphoreSlim(3);
 
-            /// Parallel processing
-            var tasks = catalogUrls.Select(async url =>
+            var tasks = urls.Select(async url =>
             {
                 if (string.IsNullOrWhiteSpace(url)) return;
 
-                /// Wrapper of semaphore
                 await semaphore.WaitAsync();
                 try
                 {
-                    Console.WriteLine($"Parsing: {url}");
                     var page = await context.NewPageAsync();
-                    var pageProducts = await ScrapeCatalogPageAsync(page, url);
+                    var items = await ScrapeCatalogPageAsync(page, url);
                     await page.CloseAsync();
 
-                    lock (allProducts)
-                        allProducts.AddRange(pageProducts);
+                    lock (all) all.AddRange(items);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"{url}: {ex.Message}");
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
+                finally { semaphore.Release(); }
             });
 
             await Task.WhenAll(tasks);
-            return allProducts;
+            return all;
         }
     }
 }

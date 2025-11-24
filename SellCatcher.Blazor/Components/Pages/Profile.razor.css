@@ -44,22 +44,29 @@
   -o-border-radius: 50px;
   transition: 1s;
 }
+
 .redact-button {
   width: 0px;
   height: 0px;
   border: none;
 }
-p[prof-text] {
+
+.prof-text {
   size: 10px;
   font-weight: 700;
   margin: 0px;
   transition: all 20s ease;
 }
+
 .divider {
   height: 2px;
   opacity: 1;
   background-color: #000000;
 }
 
-input {
+input,
+option,
+select {
+  border: 1px solid #2e2e2e3d;
+  border-radius: 10px;
 }
