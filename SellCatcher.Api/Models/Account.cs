@@ -2,15 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LiteDB;
 
 namespace SellCatcher.Api.Models
 {
     public class Account
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public required string UserName { get; set; }
-        public required string FirstName { get; set; }
-        public required string LastName { get; set; }
-        public required string PasswordHash { get; set; }
+        [BsonId]
+        public Guid Id { get; set; } 
+        public string UserName { get; set; }
+        public string Email { get; set; } 
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string PasswordHash { get; set; }
     }
 }
