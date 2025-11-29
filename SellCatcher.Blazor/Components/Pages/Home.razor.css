@@ -18,9 +18,27 @@
     align-items: center;
 }
 
+h1 {
+    font-family: "Nunito";
+    font-weight: 800;
+    font-size: 72px;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    color: #1A1A1A;
+}
+
+h2 {
+    color: white;
+    font-family: "Nunito";
+    font-weight: 100 !important;
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+
 .categories-row {
     display: flex;
-    gap: 6rem;
+    gap: 2rem;
     flex-wrap: wrap;
     justify-content: center;
     margin-top: -120px;
@@ -40,7 +58,7 @@
     -o-border-radius: 22px;
 }
 
-.search-bar{
+.search-bar {
     margin-top: 1rem;
     width: 100%;
     max-width: 400px;
