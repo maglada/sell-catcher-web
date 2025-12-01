@@ -69,5 +69,12 @@ namespace SellCatcher.Api.Controllers
             var products = _discountService.GetAll();
             return Ok(products);
         }
+        [HttpGet("search")] /*Эндпоинт поиска скидок*/
+        public IActionResult Search([FromQuery] string query)
+        {
+            var results = _discountService.Search(query);
+            return Ok(results);
+        }
+
     }
 }
