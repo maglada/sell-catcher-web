@@ -31,6 +31,7 @@ builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthS
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddAuth(builder.Configuration);
+builder.Services.AddScoped<StoreService>();
 builder.Services.AddCors(o => o.AddPolicy("LocalDev", p =>
   p.WithOrigins("http://localhost:5182")
   .AllowAnyHeader()
@@ -69,14 +70,7 @@ var app = builder.Build();
 //    Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
 //    Console.WriteLine($"Saved to DB: {totalSaved}\n");
 //}
-    foreach (var result in results)
-    {
-        string storeName = pattern.Contains("Novus") ? "NOVUS" : "SILPO";
-        var products = result.Value;
-        totalProducts += products.Count;
-        int saved = productService.SaveProducts(products, storeName);
-        totalSaved += saved;
-    }
+
 
 
 app.UseHttpsRedirection();
