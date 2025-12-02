@@ -89,5 +89,28 @@ namespace SellCatcher.Api.Services
             category.Products.Add(discount);
             stores.Upsert(store);
         }
+        public List<Product> Search(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new List<Product>();
+
+            query = query.ToLower().Trim();
+
+            using var db = new LiteDatabase(_dbPath);
+            var stores = db.GetCollection<Store>("stores").FindAll();
+
+            var products = stores
+                .SelectMany(s => s.Categories)
+                .SelectMany(c => c.Products)
+                .Where(p =>                    (
+                        (!string.IsNullOrEmpty(p.Name) && p.Name.ToLower().Contains(query)) ||
+                        (!string.IsNullOrEmpty(p.Category) && p.Category.ToLower().Contains(query))
+                    )
+                )
+                .ToList();
+
+            return products;
+        }
+
     }
 }
