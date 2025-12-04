@@ -1,13 +1,14 @@
 @page "/categories"
 @page "/categories/{Category}"
+@using System.Net
 
 <div class="page-layout">
     <div class="sidebar-sticky">
         <aside class="sidebar">
             <div>
                 <strong>Ключові слова</strong>
-                <input type="text" placeholder="молоко, хліб 2.5%..." value="@KeywordQuery" @oninput="OnKeywordTyping"
-                    @onblur="OnKeywordConfirm" style="width:auto; border:2px solid black; border-radius:10px;" />
+                <input type="text" placeholder="молоко, хліб..." value="@KeywordQuery" @onchange="OnKeywordChange"
+                    style="width:auto; border:2px solid black; border-radius:10px;" />
 
                 @if (Keywords.Count > 0)
                 {
@@ -23,77 +24,200 @@
             <div>
                 <p>
                     <strong>Ціна</strong>
-
-                    <input class="inputT" type="number" placeholder=@MinPrice @bind="MinPrice" @bind:event="oninput" />
-
+                    <input class="inputT" type="number" placeholder="@MinPrice" @bind="MinPrice" />
                     <span>–</span>
-
-                    <input class="inputT" type="number" placeholder=@MaxPrice @bind="MaxPrice" @bind:event="oninput" />
+                    <input class="inputT" type="number" placeholder="@MaxPrice" @bind="MaxPrice" />
                 </p>
-
-                <PriceRangeSlider Min="0" Max="100" Step="1" OnRangeChanged="OnRangeChangedPrice" />
+                <PriceRangeSlider Min="0" Max="1000" Step="1" OnRangeChanged="OnRangeChangedPrice" />
             </div>
 
             <div>
                 <p><strong>Магазин</strong></p>
                 <input type="checkbox" @bind="ShowNovus" /> Новус
+                <input type="checkbox" @bind="ShowSILPO" /> SILPO
             </div>
+
+            <div class="filter-block">
+                <label>Категорії</label>
+                @foreach (var c in AvailableCategories)
+                {
+                    <label style="display:block;">
+                        <input type="checkbox" checked="@IsCategoryChecked(c)" @onchange="e => ToggleCategory(c, e)" />
+                        @c.Name
+                    </label>
+                }
+            </div>
+
+            <button class="search-button" @onclick="SearchAsync">
+                Пошук
+            </button>
         </aside>
     </div>
+
     <main class="content">
-        @* Якщо ProductList очікує int, змінюй його на int? або підставляй дефолти *@
-        <ProductList FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice" FilteredShops="GetSelectedShops()"
-            FilteredKeywords="Keywords" />
+        <ProductList @ref="productList" FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"
+            FilteredShops="GetSelectedShops()" FilteredKeywords="Keywords" FilteredCategories="SelectedCategories" />
     </main>
 </div>
 
 @code {
+    private ProductList? productList;
+
     [Parameter] public string? Category { get; set; }
 
-    private bool ShowATB = true;
+    private bool ShowSILPO = true;
     private bool ShowNovus = true;
-
-    private int MinPrice { get; set; } = 100;
+    private int MinPrice { get; set; } = 0;
     private int MaxPrice { get; set; } = 1000;
 
     private string KeywordQuery { get; set; } = "";
     private List<string> Keywords { get; set; } = new();
 
+    // ⚠ Тут зберігаємо САМЕ КЛЮЧІ З БАЗИ (типу "Fish & Seafood", "SilpoLinks_fish")
+    private HashSet<string> SelectedCategories { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public record CategoryModel(string Name, string Url, string[] DbKeys);
+
+    // 🔗 Мапимо UI → URL → значення в базі
+    private static readonly List<CategoryModel> AvailableCategories = new()
+{
+new(
+"Риба та морепродукти",
+"риба",
+new[]
+{
+"Fish & Seafood",
+"SilpoLinks_fish"
+}
+),
+new(
+"Яйця та молочні",
+"яйця",
+new[]
+{
+"Dairy & Eggs",
+"SilpoLinks_egg"
+}
+),
+new(
+"Фрукти та овочі",
+"фрукти",
+new[]
+{
+"Fruits & Vegetables",
+"SilpoLinks_veg_fruit"
+}
+),
+new(
+"М’ясо та птиця",
+"м’ясо",
+new[]
+{
+"Meat & Poultry",
+"SilpoLinks_meat"
+}
+),
+new(
+"Напівфабрикати",
+"напівфабрикати",
+new[]
+{
+"Semi-Finished Products",
+"SilpoLinks_halfmade"
+}
+),
+new(
+"Цигарки",
+"цигарки",
+new[]
+{
+"SilpoLinks_cig",
+// Якщо хочеш включити алкоголь сюди — розкоментуй:
+// "Alcohol & Beverages 18+"
+}
+),
+new(
+"Випічка",
+"випічка",
+new[]
+{
+"Bakery",
+"SilpoLinks_bread"
+}
+),
+};
+
     protected override void OnParametersSet()
     {
-        // якщо в URL є /categories/{category} – додаємо його в Keywords
+        var newSelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var newKeywords = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(Category))
         {
-            var cat = Category.Trim().ToLowerInvariant();
+            // /categories/%D1%80%D0%B8%D0%B1%D0%B0 -> "риба"
+            var fromUrl = WebUtility.UrlDecode(Category).Trim().ToLowerInvariant();
 
-            if (!Keywords.Contains(cat, StringComparer.OrdinalIgnoreCase))
+            var match = AvailableCategories
+            .FirstOrDefault(c => c.Url.Equals(fromUrl, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
             {
-                Keywords.Add(cat);
-                KeywordQuery = string.Join(", ", Keywords);
+                // ✅ додаємо всі ключі з бази, які відповідають цій категорії
+                newSelected.UnionWith(match.DbKeys);
+            }
+            else
+            {
+                // Якщо це не відома категорія – сприймаємо як пошуковий текст
+                newKeywords.Add(fromUrl);
+                KeywordQuery = fromUrl;
             }
         }
+
+        SelectedCategories = newSelected;
+        Keywords = newKeywords;
     }
 
-    private void OnKeywordTyping(ChangeEventArgs e)
+    // Категорія вважається "вибраною", якщо всі її DbKeys вже є в SelectedCategories
+    private bool IsCategoryChecked(CategoryModel cat) =>
+    cat.DbKeys.All(k => SelectedCategories.Contains(k));
+
+    private void ToggleCategory(CategoryModel cat, ChangeEventArgs e)
+    {
+        bool isChecked =
+        e.Value is bool b
+        ? b
+        : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
+
+        var newSet = new HashSet<string>(SelectedCategories, StringComparer.OrdinalIgnoreCase);
+
+        if (isChecked)
+        {
+            // додаємо всі ключі БД цієї категорії
+            foreach (var key in cat.DbKeys)
+                newSet.Add(key);
+        }
+        else
+        {
+            // видаляємо всі ключі БД цієї категорії
+            foreach (var key in cat.DbKeys)
+                newSet.Remove(key);
+        }
+
+        SelectedCategories = newSet;
+    }
+
+    private void OnKeywordChange(ChangeEventArgs e)
     {
         KeywordQuery = e.Value?.ToString() ?? "";
+        UpdateKeywordsList();
     }
 
-    private void OnKeywordConfirm(FocusEventArgs e)
+    private void UpdateKeywordsList()
     {
-        Keywords = SplitKeywords(KeywordQuery);
-        StateHasChanged();
-    }
-
-    private static List<string> SplitKeywords(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return new();
-        return text
-        .ToLowerInvariant()
-        .Split(new[] { ' ', ',', ';', '|', '/', '\\', '\t', '\r', '\n' },
-        StringSplitOptions.RemoveEmptyEntries)
-        .Select(s => s.Trim())
-        .Distinct()
+        Keywords = KeywordQuery
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(k => k.Trim())
+        .Where(k => !string.IsNullOrWhiteSpace(k))
         .ToList();
     }
 
@@ -101,12 +225,23 @@
     {
         MinPrice = range.min;
         MaxPrice = range.max;
-        StateHasChanged();
     }
 
     private IEnumerable<string> GetSelectedShops()
     {
-        if (ShowATB) yield return "АТБ";
-        if (ShowNovus) yield return "Новус";
+        var shops = new List<string>();
+        if (ShowSILPO) shops.Add("SILPO");
+        if (ShowNovus) shops.Add("Novus");
+        return shops;
+    }
+
+    private async Task SearchAsync()
+    {
+        UpdateKeywordsList();
+
+        if (productList is not null)
+        {
+            await productList.ReloadFromApiAsync();
+        }
     }
 }

@@ -1,6 +1,7 @@
 @using System.Globalization
 @using System.Net.Http.Json
 @using System.Text.Json.Serialization
+@using System.Net
 @inject HttpClient Http
 
 <div class="products-container">
@@ -20,29 +21,35 @@
                 <img src="@product.ImageUrl" alt="@product.Name" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
                 <span class="name">@product.Name</span>
+                @if (!string.IsNullOrEmpty(product.Category))
+                {
+                    <span class="category-tag" style="font-size:0.8em; color:gray">@product.Category</span>
+                }
             </a>
         }
-
-
     }
     else
     {
         <p>Немає продуктів за вибраними фільтрами.</p>
     }
-    <div class="pagination">
-        <button @onclick="PrevPage" disabled="@(Page == 1)">« Назад</button>
-        <span>Сторінка @Page із @TotalPages</span>
-        <button @onclick="NextPage" disabled="@(Page == TotalPages)">Далі »</button>
-    </div>
+
+    @if (TotalPages > 1)
+    {
+        <div class="pagination">
+            <button @onclick="PrevPage" disabled="@(Page == 1)">« Назад</button>
+            <span>Сторінка @Page із @TotalPages</span>
+            <button @onclick="NextPage" disabled="@(Page == TotalPages)">Далі »</button>
+        </div>
+    }
 </div>
 
 @code {
-    // Параметри від батьківської сторінки
+    [Parameter] public IEnumerable<string> FilteredCategories { get; set; } = Array.Empty<string>();
+
     [Parameter] public int FilteredPriceMin { get; set; }
     [Parameter] public int FilteredPriceMax { get; set; }
     [Parameter] public IEnumerable<string> FilteredShops { get; set; } = Array.Empty<string>();
     [Parameter] public IEnumerable<string> FilteredKeywords { get; set; } = Array.Empty<string>();
-
 
     // Дані
     private List<Product> Products = new();
@@ -54,62 +61,24 @@
     private int PageSize = 16;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredProducts.Count / PageSize));
 
-    // Завантаження/помилки
     private bool isLoading = true;
     private string? loadError;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProductsAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
         ApplyFilters();
     }
-    public sealed class Product
+
+    public async Task ReloadFromApiAsync()
     {
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = "";
-
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = "";
-
-        [JsonPropertyName("price")]
-        public decimal Price { get; set; }
-
-        [JsonPropertyName("oldPrice")]
-        public decimal? OldPrice { get; set; }
-
-        [JsonPropertyName("discount")]
-        public string? Discount { get; set; }
-
-        [JsonPropertyName("validUntil")]
-        public DateTimeOffset? ValidUntil { get; set; }
-
-        [JsonPropertyName("isOnSale")]
-        public bool IsOnSale { get; set; }
-
-        [JsonPropertyName("bulkPrice")]
-        public decimal? BulkPrice { get; set; }
-
-        [JsonPropertyName("isBulk")]
-        public bool IsBulk { get; set; }
-
-        [JsonPropertyName("category")]
-        public string Category { get; set; } = "";
-
-        [JsonPropertyName("whenUpdated")]
-        public DateTimeOffset? WhenUpdated { get; set; }
-
-        [JsonPropertyName("imageUrl")]
-        public string ImageUrl { get; set; } = "";
-
+        Page = 1; // Скидаємо сторінку при новому пошуку
+        await LoadProductsAsync();
     }
-    @* public class Product
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string Shop { get; set; }
-        public string ImageUrl { get; set; }
-        public decimal Price { get; set; }
-    } *@
 
     private async Task LoadProductsAsync()
     {
@@ -118,50 +87,88 @@
             isLoading = true;
             loadError = null;
 
-            // Коли буде API:
+            var queryParts = new List<string>();
 
-            // Поки — мокові дані:
-            @* await Task.Delay(200);
-            for (int i = 1; i <= 42; i++)
+            // 🔹 Ціна — завжди йде в API
+            queryParts.Add($"minPrice={FilteredPriceMin}");
+            queryParts.Add($"maxPrice={FilteredPriceMax}");
+
+            // 🔹 Категорія: якщо обрана рівно одна — даємо бекенду фільтрувати по ній
+            var selectedCats = (FilteredCategories ?? Array.Empty<string>())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+            if (selectedCats.Length == 1)
             {
+                queryParts.Add($"category={Uri.EscapeDataString(selectedCats[0])}");
+            }
+            // якщо 0 або більше 1 – не відправляємо category, фільтруємо по всіх вибраних
+            // нижче в ApplyFilters()
 
-                Products.Add(new Product
-                {
-                    Id = i,
-                    Name = $"Product {i}",
-                    Price = 10 + i,
-                    ImageUrl = "/images/potato.jpg",
-                    Shop = (i % 2 == 0) ? "Новус" : "АТБ"
-                });
-            } *@
-            Products = await Http.GetFromJsonAsync<List<Product>>(requestUri: "api/discounts") ?? new();
+            // 🔹 Магазини
+            var shops = (FilteredShops ?? Array.Empty<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .ToArray();
+
+            // якщо вибрано рівно один магазин — фільтруємо на бекенді
+            if (shops.Length == 1)
+            {
+                queryParts.Add($"storeName={Uri.EscapeDataString(shops[0])}");
+            }
+            // якщо 0 або >1 магазинів — не додаємо storeName, бекенд поверне всі
+
+            // 🔹 Ключові слова
+            var keywords = (FilteredKeywords ?? Array.Empty<string>())
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Select(k => k.Trim())
+            .ToArray();
+
+            if (keywords.Any())
+            {
+                // пошук передається одним рядком
+                var searchParam = Uri.EscapeDataString(string.Join(" ", keywords));
+                queryParts.Add($"search={searchParam}");
+            }
+
+            var uri = "api/comparison/filter";
+            if (queryParts.Count > 0)
+            {
+                uri += "?" + string.Join('&', queryParts);
+            }
+
+            // Виконуємо запит
+            Products = await Http.GetFromJsonAsync<List<Product>>(uri) ?? new();
+
+            // Локальні фільтри (категорії, keywords, ціна — при бажанні)
+            ApplyFilters();
         }
         catch (Exception ex)
         {
             loadError = "Не вдалося завантажити продукти: " + ex.Message;
+            Console.WriteLine(ex); // Логування в консоль браузера
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
-    }
-
-    protected override void OnParametersSet()
-    {
-        ApplyFilters(); // без умови
     }
 
     private void ApplyFilters()
     {
-        if (isLoading || Products.Count == 0)
+        if (Products == null || !Products.Any())
         {
-            // коли дані ще вантажаться — нічого не робимо
+            FilteredProducts = new();
+            UpdatePagedProducts();
             return;
         }
 
-        var shops = (FilteredShops ?? Array.Empty<string>())
-        .Where(s => !string.IsNullOrWhiteSpace(s))
-        .Select(s => s.Trim())
+        var selectedCats = (FilteredCategories ?? Array.Empty<string>())
+        .Where(c => !string.IsNullOrWhiteSpace(c))
+        .Select(c => c.Trim())
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var keywords = (FilteredKeywords ?? Array.Empty<string>())
@@ -169,33 +176,41 @@
         .Select(k => k.Trim().ToLowerInvariant())
         .ToList();
 
-        bool AndMode = true;
-
         FilteredProducts = Products
-        .Where(p => p.Price >= FilteredPriceMin && p.Price <= FilteredPriceMax)
-        // .Where(p => shops.Count == 0 || shops.Contains(p.Shop)) // коли буде Shop
         .Where(p =>
         {
-            if (keywords.Count == 0) return true;
-            var name = (p.Name ?? string.Empty).ToLowerInvariant();
-            return AndMode ? keywords.All(k => name.Contains(k))
-    : keywords.Any(k => name.Contains(k));
+            // 🔹 Дублюючий фільтр по ціні (можна залишити, щоб підстрахувати бекенд)
+            if (p.Price < FilteredPriceMin || p.Price > FilteredPriceMax)
+                return false;
+
+            // 🔹 Категорії (працює і при одному, і при кількох)
+            if (selectedCats.Count > 0 && !selectedCats.Contains(p.Category))
+                return false;
+
+            // 🔹 Ключові слова
+            if (keywords.Count > 0)
+            {
+                var name = (p.Name ?? "").ToLowerInvariant();
+                return keywords.All(k => name.Contains(k));
+            }
+
+            return true;
         })
-        .OrderBy(p => p.Name)
+        .OrderBy(p => p.Price) // Сортування за ціною за замовчуванням
         .ToList();
 
-        Page = 1;
+        if (Page > TotalPages) Page = 1;
+
         UpdatePagedProducts();
     }
 
-    @*&&
-        (shops.Count == 0 || shops.Contains(p.Shop)))*@
     private void UpdatePagedProducts()
     {
         PagedProducts = FilteredProducts
         .Skip((Page - 1) * PageSize)
         .Take(PageSize)
         .ToList();
+
         StateHasChanged();
     }
 
@@ -217,6 +232,14 @@
         }
     }
 
-
-
+    // Модель даних
+    public sealed class Product
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+        [JsonPropertyName("name")] public string Name { get; set; } = "";
+        [JsonPropertyName("price")] public decimal Price { get; set; }
+        [JsonPropertyName("category")] public string Category { get; set; } = "";
+        [JsonPropertyName("imageUrl")] public string ImageUrl { get; set; } = "";
+        // Інші поля можна додати за потребою
+    }
 }

@@ -4,98 +4,99 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-@* HTML ЧАСТИНА (Без змін структури, тільки прив'язки) *@
 <div class="modal-overlay" @onclick="OnBackdropClick">
-    <div class="@Class" @onclick:stopPropagation>
-        <div class="actions">
-            <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
-            <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
+    <div class="modal">
+        <div class="@Class" @onclick:stopPropagation>
+            <div class="actions">
+                <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
+                <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
 
-            <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
-            <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
+                <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
+                <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
+            </div>
+
+            @if (Enter)
+            {
+                @* ФОРМА ВХОДУ *@
+                <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div style="margin-top:10px;">
+                        <label>Phone number</label><br />
+                        @* Тут прив'язуємось до Phone, який доступний для запису *@
+                        <InputText class="inputInfo" @bind-Value="loginModel.Phone" placeholder="+380..." />
+                        <ValidationMessage For="@(() => loginModel.Phone)" />
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label>Password</label><br />
+                        <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
+                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    </div>
+
+                    <div class="actions" style="margin-top:16px;">
+                        <button type="submit" class="bottonEnter" disabled="@isBusy">
+                            @(isBusy ? "Signing in..." : "Sign In")
+                        </button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        <p class="error-text" style="color:red; margin-top:10px;">@error</p>
+                    }
+                </EditForm>
+            }
+            else
+            {
+                @* ФОРМА РЕЄСТРАЦІЇ *@
+                <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div style="margin-top:10px;">
+                        <label>Name</label><br />
+                        <InputText class="inputInfo" @bind-Value="registerModel.Name" placeholder="Ім'я Прізвище" />
+                        <ValidationMessage For="@(() => registerModel.Name)" />
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label>Email</label><br />
+                        <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
+                        <ValidationMessage For="@(() => registerModel.Email)" />
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label>Phone number</label><br />
+                        <InputText class="inputInfo" @bind-Value="registerModel.Phone" placeholder="+380..." />
+                        <ValidationMessage For="@(() => registerModel.Phone)" />
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label>Password</label><br />
+                        <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
+                        <ValidationMessage For="@(() => registerModel.Password)" />
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label>Confirm password</label><br />
+                        <InputText type="password" class="inputInfo" @bind-Value="registerModel.ConfirmPassword" />
+                        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                    </div>
+
+                    <div class="actions" style="margin-top:16px;">
+                        <button type="submit" class="bottonEnter" disabled="@isBusy">
+                            @(isBusy ? "Registering..." : "Register")
+                        </button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        <p class="error-text" style="color:red; margin-top:10px;">@error</p>
+                    }
+                </EditForm>
+            }
         </div>
-
-        @if (Enter)
-        {
-            @* ФОРМА ВХОДУ *@
-            <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div style="margin-top:10px;">
-                    <label>Phone number</label><br />
-                    @* Тут прив'язуємось до Phone, який доступний для запису *@
-                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" placeholder="+380..." />
-                    <ValidationMessage For="@(() => loginModel.Phone)" />
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label>Password</label><br />
-                    <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
-                    <ValidationMessage For="@(() => loginModel.Password)" />
-                </div>
-
-                <div class="actions" style="margin-top:16px;">
-                    <button type="submit" class="bottonEnter" disabled="@isBusy">
-                        @(isBusy ? "Signing in..." : "Sign In")
-                    </button>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(error))
-                {
-                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
-                }
-            </EditForm>
-        }
-        else
-        {
-            @* ФОРМА РЕЄСТРАЦІЇ *@
-            <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div style="margin-top:10px;">
-                    <label>Name</label><br />
-                    <InputText class="inputInfo" @bind-Value="registerModel.Name" placeholder="Ім'я Прізвище" />
-                    <ValidationMessage For="@(() => registerModel.Name)" />
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label>Email</label><br />
-                    <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
-                    <ValidationMessage For="@(() => registerModel.Email)" />
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label>Phone number</label><br />
-                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" placeholder="+380..." />
-                    <ValidationMessage For="@(() => registerModel.Phone)" />
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label>Password</label><br />
-                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
-                    <ValidationMessage For="@(() => registerModel.Password)" />
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label>Confirm password</label><br />
-                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.ConfirmPassword" />
-                    <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
-                </div>
-
-                <div class="actions" style="margin-top:16px;">
-                    <button type="submit" class="bottonEnter" disabled="@isBusy">
-                        @(isBusy ? "Registering..." : "Register")
-                    </button>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(error))
-                {
-                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
-                }
-            </EditForm>
-        }
     </div>
 </div>
 
