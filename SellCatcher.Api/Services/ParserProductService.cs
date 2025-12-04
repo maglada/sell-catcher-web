@@ -69,6 +69,7 @@ namespace SellCatcher.Api.Services
                         alreadyExist.IsBulk = product.IsBulk;
                         alreadyExist.BulkPrice = product.BulkPrice;
                         alreadyExist.ImageUrl = product.ImageUrl;
+                        alreadyExist.StoreName = storeName;
                         alreadyExist.WhenUpdated = DateTime.Now;
                     }
                     else
@@ -87,6 +88,7 @@ namespace SellCatcher.Api.Services
                             IsBulk = product.IsBulk,
                             BulkPrice = product.BulkPrice,
                             ImageUrl = product.ImageUrl,
+                            StoreName = storeName,
                             WhenUpdated = DateTime.Now
                         });
                     }

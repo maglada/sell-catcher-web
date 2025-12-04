@@ -24,12 +24,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
+builder.Services.AddSingleton<StoreService>();
 builder.Services.AddControllers();
+builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddSingleton<ITokenRepository, LiteDbTokenRepository>();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
-builder.Services.AddAuth();
+// builder.Services.AddAuth();
 builder.Services.AddCors(o => o.AddPolicy("LocalDev", p =>
   p.WithOrigins("http://localhost:5182")
   .AllowAnyHeader()
@@ -47,26 +49,26 @@ var filepatterns = new List<string> { "NovusLinks_*.txt", "SilpoLinks_*.txt" };
 
 foreach (var pattern in filepatterns)
 {
-    var results = await factory.ProcessAllFilesAsync(
-        directory: Path.Combine(AppContext.BaseDirectory, "sites"),
-        filePattern: pattern
-    );
+  var results = await factory.ProcessAllFilesAsync(
+      directory: Path.Combine(AppContext.BaseDirectory, "sites"),
+      filePattern: pattern
+  );
 
-    var productService = new ParserProductService.ProductService();
-    int totalSaved = 0;
-    int totalProducts = 0;
+  var productService = new ParserProductService.ProductService();
+  int totalSaved = 0;
+  int totalProducts = 0;
 
-    foreach (var result in results)
-    {
-        string storeName = pattern.Contains("Novus") ? "NOVUS" : "SILPO";
-        var products = result.Value;
-        totalProducts += products.Count;
-        int saved = productService.SaveProducts(products, storeName);
-        totalSaved += saved;
-    }
+  // foreach (var result in results)
+  // {
+  //   string storeName = pattern.Contains("Novus") ? "NOVUS" : "SILPO";
+  //   var products = result.Value;
+  //   totalProducts += products.Count;
+  //   int saved = productService.SaveProducts(products, storeName);
+  //   totalSaved += saved;
+  // }
 
-    Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
-    Console.WriteLine($"Saved to DB: {totalSaved}\n");
+  Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
+  Console.WriteLine($"Saved to DB: {totalSaved}\n");
 }
 
 app.UseHttpsRedirection();
