@@ -89,3 +89,22 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+
+.pagination button {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.pagination button:hover:not([disabled]) {
+  background: #f2f2f2;
+}
+
+.pagination button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
