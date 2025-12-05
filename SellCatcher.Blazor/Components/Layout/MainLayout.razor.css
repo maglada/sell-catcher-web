@@ -8,17 +8,22 @@
 
 .site-header {
   display: flex;
-  justify-content: space-between; /* Лого зліва, іконки справа */
-  align-items: center; /* Вирівняти по вертикалі */
+  justify-content: space-between;
+  /* Лого зліва, іконки справа */
+  align-items: center;
+  /* Вирівняти по вертикалі */
   background-color: #f1f1f185;
   color: white;
   padding: 10px 20px;
   height: 70px;
 }
+
 .site-header-second {
   display: flex;
-  justify-content: space-between; /* Лого зліва, іконки справа */
-  align-items: center; /* Вирівняти по вертикалі */
+  justify-content: space-between;
+  /* Лого зліва, іконки справа */
+  align-items: center;
+  /* Вирівняти по вертикалі */
   background-color: #ffffff;
   color: white;
   padding: 10px 20px;
@@ -27,8 +32,10 @@
 
 .logo-block {
   display: flex;
-  align-items: center; /* "Лого" і кнопка по одній лінії */
-  gap: 15px; /* відстань між ними */
+  align-items: center;
+  /* "Лого" і кнопка по одній лінії */
+  gap: 15px;
+  /* відстань між ними */
 }
 
 .site-footer {
@@ -43,10 +50,12 @@
   font-size: 0.9rem;
   height: 20vh;
 }
+
 .site-content {
   flex: 1;
   min-height: 300px;
 }
+
 .button-yellow {
   width: 125px;
   height: 35px;
@@ -54,6 +63,8 @@
   background-color: rgb(233, 181, 10);
   border-style: hidden;
 }
+
+.iconbutton.img {}
 
 .iconbutton {
   background-color: #f1f1f185;

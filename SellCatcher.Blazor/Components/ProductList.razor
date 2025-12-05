@@ -21,10 +21,6 @@
                 <img src="@product.ImageUrl" alt="@product.Name" />
                 <span class="price">від @product.Price.ToString("C", new CultureInfo("uk-UA"))</span>
                 <span class="name">@product.Name</span>
-                @if (!string.IsNullOrEmpty(product.Category))
-                {
-                    <span class="category-tag" style="font-size:0.8em; color:gray">@product.Category</span>
-                }
             </a>
         }
     }
@@ -51,12 +47,10 @@
     [Parameter] public IEnumerable<string> FilteredShops { get; set; } = Array.Empty<string>();
     [Parameter] public IEnumerable<string> FilteredKeywords { get; set; } = Array.Empty<string>();
 
-    // Дані
     private List<Product> Products = new();
     private List<Product> FilteredProducts = new();
     private List<Product> PagedProducts = new();
 
-    // Пагінація
     private int Page = 1;
     private int PageSize = 16;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredProducts.Count / PageSize));
@@ -76,7 +70,7 @@
 
     public async Task ReloadFromApiAsync()
     {
-        Page = 1; // Скидаємо сторінку при новому пошуку
+        Page = 1;
         await LoadProductsAsync();
     }
 
@@ -89,11 +83,9 @@
 
             var queryParts = new List<string>();
 
-            // 🔹 Ціна — завжди йде в API
             queryParts.Add($"minPrice={FilteredPriceMin}");
             queryParts.Add($"maxPrice={FilteredPriceMax}");
 
-            // 🔹 Категорія: якщо обрана рівно одна — даємо бекенду фільтрувати по ній
             var selectedCats = (FilteredCategories ?? Array.Empty<string>())
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .Select(c => c.Trim())
@@ -104,16 +96,12 @@
             {
                 queryParts.Add($"category={Uri.EscapeDataString(selectedCats[0])}");
             }
-            // якщо 0 або більше 1 – не відправляємо category, фільтруємо по всіх вибраних
-            // нижче в ApplyFilters()
 
-            // 🔹 Магазини
             var shops = (FilteredShops ?? Array.Empty<string>())
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Select(s => s.Trim())
             .ToArray();
 
-            // якщо вибрано рівно один магазин — фільтруємо на бекенді
             if (shops.Length == 1)
             {
                 queryParts.Add($"storeName={Uri.EscapeDataString(shops[0])}");
@@ -232,7 +220,6 @@
         }
     }
 
-    // Модель даних
     public sealed class Product
     {
         [JsonPropertyName("id")] public string Id { get; set; } = "";
@@ -240,6 +227,5 @@
         [JsonPropertyName("price")] public decimal Price { get; set; }
         [JsonPropertyName("category")] public string Category { get; set; } = "";
         [JsonPropertyName("imageUrl")] public string ImageUrl { get; set; } = "";
-        // Інші поля можна додати за потребою
     }
 }

@@ -8,7 +8,9 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly HttpClient _httpClient;
-    private readonly string _authTokenKey = "authToken";
+
+    private const string AccessTokenKey = "authToken";
+    private const string RefreshTokenKey = "refreshToken";
 
     public CustomAuthStateProvider(IJSRuntime jsRuntime, HttpClient httpClient)
     {
@@ -16,46 +18,83 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         _httpClient = httpClient;
     }
 
-    // ÷ей метод викликаЇтьс€ Blazor-ом, щоб д≥знатис€, хто зараз користувач
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        string token = "";
+        string? token = null;
+
         try
         {
-            token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", _authTokenKey);
+            token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AccessTokenKey);
         }
         catch
         {
-            // ≤гноруЇмо помилки (наприклад, при prerendering)
         }
 
-        // якщо токена немаЇ Ч повертаЇмо "порожнього" користувача (не авторизований)
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrWhiteSpace(token))
         {
             _httpClient.DefaultRequestHeaders.Authorization = null;
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
+            return new AuthenticationState(anonymous);
         }
 
-        // якщо токен Ї Ч додаЇмо його в заголовки запит≥в
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
 
-        // ѕарсимо дан≥ з токена ≥ створюЇмо авторизованого користувача
         var identity = new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt");
         var user = new ClaimsPrincipal(identity);
 
         return new AuthenticationState(user);
     }
 
-    // ƒопом≥жний метод дл€ читанн€ даних всередин≥ токена (Base64 декодуванн€)
+
+    public async Task SetTokensAsync(string accessToken, string refreshToken)
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AccessTokenKey, accessToken);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", RefreshTokenKey, refreshToken);
+
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var identity = new ClaimsIdentity(ParseClaimsFromJwt(accessToken), "jwt");
+        var user = new ClaimsPrincipal(identity);
+
+        NotifyAuthenticationStateChanged(
+            Task.FromResult(new AuthenticationState(user)));
+    }
+
+
+    public async Task LogoutAsync()
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AccessTokenKey);
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", RefreshTokenKey);
+
+        _httpClient.DefaultRequestHeaders.Authorization = null;
+
+        var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
+        NotifyAuthenticationStateChanged(
+            Task.FromResult(new AuthenticationState(anonymous)));
+    }
+
+    public async Task<string?> GetAccessTokenAsync()
+        => await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AccessTokenKey);
+
+    public async Task<string?> GetRefreshTokenAsync()
+        => await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", RefreshTokenKey);
+
+    // ---------- JWT helpers ----------
+
     public static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
     {
         var payload = jwt.Split('.')[1];
         var jsonBytes = ParseBase64WithoutPadding(payload);
-        var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
+        var keyValuePairs =
+            JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
 
-        if (keyValuePairs == null) return Enumerable.Empty<Claim>();
+        if (keyValuePairs == null)
+            return Enumerable.Empty<Claim>();
 
-        return keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value.ToString() ?? ""));
+        return keyValuePairs.Select(kvp =>
+            new Claim(kvp.Key, kvp.Value?.ToString() ?? string.Empty));
     }
 
     private static byte[] ParseBase64WithoutPadding(string base64)
@@ -65,6 +104,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             case 2: base64 += "=="; break;
             case 3: base64 += "="; break;
         }
+
         return Convert.FromBase64String(base64);
     }
 }

@@ -1,12 +1,14 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Text.Json
+@using System.Net.Http.Json
+@inject CustomAuthStateProvider AuthStateProvider
 
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-<div class="modal-overlay" @onclick="OnBackdropClick">
-    <div class="modal">
-        <div class="@Class" @onclick:stopPropagation>
+<div class="modal-overlay">
+    <div class="@ModalCssClass" @onclick:stopPropagation>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
             <div class="actions">
                 <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
                 <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
@@ -14,93 +16,94 @@
                 <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
                 <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
             </div>
-
-            @if (Enter)
-            {
-                @* ФОРМА ВХОДУ *@
-                <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <div style="margin-top:10px;">
-                        <label>Phone number</label><br />
-                        @* Тут прив'язуємось до Phone, який доступний для запису *@
-                        <InputText class="inputInfo" @bind-Value="loginModel.Phone" placeholder="+380..." />
-                        <ValidationMessage For="@(() => loginModel.Phone)" />
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <label>Password</label><br />
-                        <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
-                        <ValidationMessage For="@(() => loginModel.Password)" />
-                    </div>
-
-                    <div class="actions" style="margin-top:16px;">
-                        <button type="submit" class="bottonEnter" disabled="@isBusy">
-                            @(isBusy ? "Signing in..." : "Sign In")
-                        </button>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(error))
-                    {
-                        <p class="error-text" style="color:red; margin-top:10px;">@error</p>
-                    }
-                </EditForm>
-            }
-            else
-            {
-                @* ФОРМА РЕЄСТРАЦІЇ *@
-                <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <div style="margin-top:10px;">
-                        <label>Name</label><br />
-                        <InputText class="inputInfo" @bind-Value="registerModel.Name" placeholder="Ім'я Прізвище" />
-                        <ValidationMessage For="@(() => registerModel.Name)" />
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <label>Email</label><br />
-                        <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
-                        <ValidationMessage For="@(() => registerModel.Email)" />
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <label>Phone number</label><br />
-                        <InputText class="inputInfo" @bind-Value="registerModel.Phone" placeholder="+380..." />
-                        <ValidationMessage For="@(() => registerModel.Phone)" />
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <label>Password</label><br />
-                        <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
-                        <ValidationMessage For="@(() => registerModel.Password)" />
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <label>Confirm password</label><br />
-                        <InputText type="password" class="inputInfo" @bind-Value="registerModel.ConfirmPassword" />
-                        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
-                    </div>
-
-                    <div class="actions" style="margin-top:16px;">
-                        <button type="submit" class="bottonEnter" disabled="@isBusy">
-                            @(isBusy ? "Registering..." : "Register")
-                        </button>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(error))
-                    {
-                        <p class="error-text" style="color:red; margin-top:10px;">@error</p>
-                    }
-                </EditForm>
-            }
+            <button type="button" class="close-button" @onclick="OnCloseClick" aria-label="Close">
+                ✕
+            </button>
         </div>
+
+        @if (Enter)
+        {
+            @* ФОРМА ВХОДУ *@
+            <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div style="margin-top:10px;">
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="loginModel.Phone" placeholder="+380..." />
+                    <ValidationMessage For="@(() => loginModel.Phone)" />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="loginModel.Password" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @(isBusy ? "Signing in..." : "Sign In")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
+                }
+            </EditForm>
+        }
+        else
+        {
+            @* ФОРМА РЕЄСТРАЦІЇ *@
+            <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div style="margin-top:10px;">
+                    <label>Name</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Name" placeholder="Ім'я Прізвище" />
+                    <ValidationMessage For="@(() => registerModel.Name)" />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Email</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Email" placeholder="email@example.com" />
+                    <ValidationMessage For="@(() => registerModel.Email)" />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Phone number</label><br />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Phone" placeholder="+380..." />
+                    <ValidationMessage For="@(() => registerModel.Phone)" />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.Password" />
+                    <ValidationMessage For="@(() => registerModel.Password)" />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Confirm password</label><br />
+                    <InputText type="password" class="inputInfo" @bind-Value="registerModel.ConfirmPassword" />
+                    <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                </div>
+
+                <div class="actions" style="margin-top:16px;">
+                    <button type="submit" class="bottonEnter" disabled="@isBusy">
+                        @(isBusy ? "Registering..." : "Register")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
+                }
+            </EditForm>
+        }
     </div>
 </div>
 
-@* C# ЧАСТИНА *@
 @code {
     [Parameter] public bool Enter { get; set; } = true;
     [Parameter] public string Class { get; set; } = "";
@@ -111,7 +114,10 @@
 
     private bool isBusy = false;
     private string? error;
-
+    private string ModalCssClass =>
+    string.IsNullOrWhiteSpace(Class)
+    ? (Enter ? "modal" : "modal modal-reg")
+    : (Enter ? $"modal {Class}" : $"modal modal-reg {Class}");
     private void SignTypeIn()
     {
         Enter = true;
@@ -124,20 +130,28 @@
         error = null;
     }
 
-    private async Task OnBackdropClick()
+    private async Task OnCloseClick()
     {
-        await OnClose.InvokeAsync();
+        if (isBusy)
+            return;
+
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
     }
 
+    // --------- LOGIN ---------
     private async Task SubmitLogin()
     {
+        if (isBusy)
+            return;
+
         isBusy = true;
         error = null;
 
         try
         {
-            // ВИПРАВЛЕННЯ: Ми беремо Phone з моделі і відправляємо як UserName в API
-            // Тут створюється новий анонімний об'єкт, тому проблем з readonly не буде
             var payload = new
             {
                 UserName = loginModel.Phone,
@@ -146,31 +160,51 @@
 
             var resp = await Http.PostAsJsonAsync("api/login", payload);
 
-            if (resp.IsSuccessStatusCode)
-            {
-                var result = await resp.Content.ReadFromJsonAsync<ApiTokenResponse>();
-
-                if (result != null && !string.IsNullOrEmpty(result.AccessToken))
-                {
-                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.AccessToken);
-                    await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", result.RefreshToken);
-
-                    var userInfo = new { Name = loginModel.Phone };
-                    await JS.InvokeVoidAsync("localStorage.setItem", "auth_user", JsonSerializer.Serialize(userInfo));
-
-                    await JS.InvokeVoidAsync("location.reload");
-                }
-            }
-            else
+            if (!resp.IsSuccessStatusCode)
             {
                 var errorText = await resp.Content.ReadAsStringAsync();
                 error = TryParseErrorMessage(errorText);
+                return;
+            }
+
+            var result = await resp.Content.ReadFromJsonAsync<ApiTokenResponse>();
+
+            if (result == null || string.IsNullOrWhiteSpace(result.AccessToken))
+            {
+                error = "Помилка обробки відповіді сервера.";
+                return;
+            }
+
+            // токени
+            // 🔐 довіряємо CustomAuthStateProvider зберігання токенів і оновлення auth state
+            await AuthStateProvider.SetTokensAsync(result.AccessToken, result.RefreshToken);
+
+
+            // базова інформація про користувача (для профілю)
+            var userInfo = new
+            {
+                Id = "",
+                Name = loginModel.Phone,
+                Email = "",
+                Phone = loginModel.Phone
+            };
+
+            await JS.InvokeVoidAsync(
+            "localStorage.setItem",
+            "auth_user",
+            JsonSerializer.Serialize(userInfo)
+            );
+
+            // закриваємо модалку
+            if (OnClose.HasDelegate)
+            {
+                await OnClose.InvokeAsync();
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine(ex);
             error = "Помилка з'єднання з сервером.";
-            Console.WriteLine(ex.Message);
         }
         finally
         {
@@ -178,18 +212,22 @@
         }
     }
 
+    // --------- REGISTER ---------
     private async Task SubmitRegister()
     {
+        if (isBusy)
+            return;
+
         isBusy = true;
         error = null;
 
         try
         {
-            var names = registerModel.Name.Trim().Split(' ');
+            var names = registerModel.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var firstName = names.Length > 0 ? names[0] : registerModel.Name;
             var lastName = names.Length > 1 ? names[1] : "";
 
-            // Телефон стає логіном
+            // телефон = логін
             var userNameToUse = registerModel.Phone;
 
             var apiPayload = new
@@ -204,54 +242,56 @@
 
             var resp = await Http.PostAsJsonAsync("api/register", apiPayload);
 
-            if (resp.IsSuccessStatusCode)
-            {
-                // Для авто-логіну переносимо дані в loginModel
-                loginModel.Phone = registerModel.Phone;
-                loginModel.Password = registerModel.Password;
-
-                isBusy = false;
-                await SubmitLogin();
-                return;
-            }
-            else
+            if (!resp.IsSuccessStatusCode)
             {
                 var errorText = await resp.Content.ReadAsStringAsync();
                 error = TryParseErrorMessage(errorText);
+                return;
             }
+
+            // автологін після реєстрації
+            loginModel.Phone = registerModel.Phone;
+            loginModel.Password = registerModel.Password;
+
+            await SubmitLogin();
         }
         catch (Exception ex)
         {
+            Console.WriteLine(ex);
             error = "Помилка з'єднання з сервером.";
-            Console.WriteLine(ex.Message);
         }
         finally
         {
-            if (error != null) isBusy = false;
+            isBusy = false;
         }
     }
 
-    private string TryParseErrorMessage(string response)
+    // --------- helpers ---------
+    private static string TryParseErrorMessage(string response)
     {
         try
         {
             using var doc = JsonDocument.Parse(response);
-            if (doc.RootElement.TryGetProperty("message", out var msgElement))
-            {
-                return msgElement.GetString() ?? "Помилка";
-            }
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("detail", out var detail))
+                return detail.GetString() ?? "Помилка авторизації";
+
+            if (root.TryGetProperty("message", out var msg))
+                return msg.GetString() ?? "Помилка авторизації";
         }
-        catch { }
-        // Якщо це просто текст, повертаємо його обрізаним, якщо він дуже довгий
+        catch
+        {
+            // ігноруємо, нижче повернемо загальне повідомлення
+        }
+
         return response.Length > 100 ? "Помилка авторизації" : response;
     }
 
-    // --- ViewModels ---
-
+    // --------- ViewModels ---------
     public class LoginViewModel
     {
         [Required]
-        // ТУТ БУЛА ПОМИЛКА: тепер це звичайна властивість, в яку можна писати
         public string Phone { get; set; } = "";
 
         [Required]

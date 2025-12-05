@@ -71,3 +71,14 @@ select {
   border: 1px solid #2e2e2e3d;
   border-radius: 10px;
 }
+
+.bottonEnter {
+  border: none;
+  border-radius: 10px;
+  height: 1%;
+  font-weight: 200;
+  background-color: #ff465f;
+  margin-bottom: 10px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+
+}

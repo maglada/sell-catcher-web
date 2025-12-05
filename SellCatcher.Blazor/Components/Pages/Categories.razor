@@ -33,17 +33,30 @@
 
             <div>
                 <p><strong>Магазин</strong></p>
-                <input type="checkbox" @bind="ShowNovus" /> Новус
-                <input type="checkbox" @bind="ShowSILPO" /> SILPO
+
+                <label class="nice-checkbox">
+                    <input type="checkbox" class="nice-checkbox-input" @bind="ShowNovus" />
+                    <span class="nice-checkbox-box"></span>
+                    <span class="nice-checkbox-text">Novus</span>
+                </label>
+
+                <label class="nice-checkbox">
+                    <input type="checkbox" class="nice-checkbox-input" @bind="ShowSILPO" />
+                    <span class="nice-checkbox-box"></span>
+                    <span class="nice-checkbox-text">SILPO</span>
+                </label>
             </div>
 
             <div class="filter-block">
                 <label>Категорії</label>
+
                 @foreach (var c in AvailableCategories)
                 {
-                    <label style="display:block;">
-                        <input type="checkbox" checked="@IsCategoryChecked(c)" @onchange="e => ToggleCategory(c, e)" />
-                        @c.Name
+                    <label class="nice-checkbox" style="display:block;">
+                        <input type="checkbox" class="nice-checkbox-input" checked="@IsCategoryChecked(c)"
+                            @onchange="e => ToggleCategory(c, e)" />
+                        <span class="nice-checkbox-box"></span>
+                        <span class="nice-checkbox-text">@c.Name</span>
                     </label>
                 }
             </div>
@@ -73,12 +86,11 @@
     private string KeywordQuery { get; set; } = "";
     private List<string> Keywords { get; set; } = new();
 
-    // ⚠ Тут зберігаємо САМЕ КЛЮЧІ З БАЗИ (типу "Fish & Seafood", "SilpoLinks_fish")
-    private HashSet<string> SelectedCategories { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> SelectedCategories { get; set; } =
+    new(StringComparer.OrdinalIgnoreCase);
 
     public record CategoryModel(string Name, string Url, string[] DbKeys);
 
-    // 🔗 Мапимо UI → URL → значення в базі
     private static readonly List<CategoryModel> AvailableCategories = new()
 {
 new(
@@ -132,7 +144,6 @@ new(
 new[]
 {
 "SilpoLinks_cig",
-// Якщо хочеш включити алкоголь сюди — розкоментуй:
 // "Alcohol & Beverages 18+"
 }
 ),
@@ -154,7 +165,6 @@ new[]
 
         if (!string.IsNullOrWhiteSpace(Category))
         {
-            // /categories/%D1%80%D0%B8%D0%B1%D0%B0 -> "риба"
             var fromUrl = WebUtility.UrlDecode(Category).Trim().ToLowerInvariant();
 
             var match = AvailableCategories
@@ -162,12 +172,10 @@ new[]
 
             if (match != null)
             {
-                // ✅ додаємо всі ключі з бази, які відповідають цій категорії
                 newSelected.UnionWith(match.DbKeys);
             }
             else
             {
-                // Якщо це не відома категорія – сприймаємо як пошуковий текст
                 newKeywords.Add(fromUrl);
                 KeywordQuery = fromUrl;
             }
@@ -177,7 +185,6 @@ new[]
         Keywords = newKeywords;
     }
 
-    // Категорія вважається "вибраною", якщо всі її DbKeys вже є в SelectedCategories
     private bool IsCategoryChecked(CategoryModel cat) =>
     cat.DbKeys.All(k => SelectedCategories.Contains(k));
 
@@ -192,13 +199,11 @@ new[]
 
         if (isChecked)
         {
-            // додаємо всі ключі БД цієї категорії
             foreach (var key in cat.DbKeys)
                 newSet.Add(key);
         }
         else
         {
-            // видаляємо всі ключі БД цієї категорії
             foreach (var key in cat.DbKeys)
                 newSet.Remove(key);
         }
