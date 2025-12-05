@@ -117,7 +117,7 @@ namespace SellCatcher.Api.Controllers
             if (Request.Query.TryGetValue("storeName", out var storeName))
             {
                 discounts = discounts.Where(d => 
-                    d.Name.Equals(storeName.ToString(), StringComparison.OrdinalIgnoreCase));
+                    d.StoreName.Equals(storeName.ToString(), StringComparison.OrdinalIgnoreCase));
             }
             
             // min filter (?minPrice=x)

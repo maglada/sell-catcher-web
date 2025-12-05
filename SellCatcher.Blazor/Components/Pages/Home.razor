@@ -1,12 +1,12 @@
-@page "/"   // Defines this component as the main (root) page of the Blazor app
+@page "/" // Defines this component as the main (root) page of the Blazor app
 
 <!-- Hero -->
 <section class="hero">
-    <h1>SELL CATCHER</h1>
-
+    <h1>Actio</h1>
+    <h2>Швидко. Просто. Дешево</h2>
     <!-- Custom search component (probably reusable across pages) -->
     <div>
-        <SearchBar/>
+        <SearchBar />
     </div>
 </section>
 
@@ -14,17 +14,17 @@
 <section class="categories">
     <div class="categories-row">
         <!-- Each CategoryButton is a Blazor component showing a category card -->
-        <CategoryButton Title="Картопля 1" Link="/categories/1" ImageUrl="images/potato.jpg" />
-        <CategoryButton Title="Картопля 2" Link="/categories/2" ImageUrl="images/potato.jpg" />
-        <CategoryButton Title="Картопля 3" Link="/categories/3" ImageUrl="images/potato.jpg" />
-        <CategoryButton Title="Картопля 4" Link="/categories/4" ImageUrl="images/potato.jpg" />
+        <CategoryButton Title="Фрукти та овочі" Link="/categories/Фрукти;овочі" ImageUrl="images/Fruits.png" />
+        <CategoryButton Title="М'ясо" Link="/categories/М'ясо" ImageUrl="images/Meat.png" />
+        <CategoryButton Title="Яйця та молочні продукти" Link="/categories/Яйця" ImageUrl="images/EggsAndMilky.png" />
+        <CategoryButton Title="Випічка" Link="/categories/Випічка" ImageUrl="images/Bread.png" />
     </div>
 
     <!-- "Show more categories" link leading to /categories page -->
     <div style="text-align: center; padding: 3rem;">
         <a href="/categories" style="text-decoration: none; color: black;">
-            Більше категорій 
-            <img src="icons/arrow-right.svg"/>
+            Більше категорій
+            <img src="icons/arrow-right.svg" />
         </a>
         <!-- previously replaced with <h2>, now simplified as a styled link -->
     </div>

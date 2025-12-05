@@ -4,17 +4,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 1000;
   padding: 1rem;
   backdrop-filter: blur(5px);
 }
 
-.modal{
+.modal {
   position: relative;
   background: #fff;
   border-radius: 30px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   width: 400px;
   height: 300px;
   overflow-y: auto;
@@ -26,11 +26,12 @@
   -ms-border-radius: 30px;
   -o-border-radius: 30px;
 }
-.modal-reg{
+
+.modal-reg {
   position: relative;
   background: #fff;
   border-radius: 30px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   width: 400px;
   height: 400px;
   overflow-x: hidden;
@@ -43,13 +44,13 @@
   -o-border-radius: 30px;
 }
 
-form{
-  position:relative;
-  left:10%
+form {
+  position: relative;
+  left: 10%
 }
 
 .actions {
-  display:inline-flex;
+  display: inline-flex;
   justify-content: space-between;
   width: 100%;
 }
@@ -58,14 +59,15 @@ form{
   display: none;
 }
 
-.bottonEnter{
+.bottonEnter {
   position: relative;
-  top:30px;
-  left:33%;
-  height:30px;
-  width:35%;
-  background-color: rgb(233, 181, 10);;
-  border:none;
+  top: 30px;
+  left: 33%;
+  height: 30px;
+  width: 35%;
+  background-color: rgb(233, 181, 10);
+  ;
+  border: none;
   border-radius: 20px;
   -webkit-border-radius: 20px;
   -moz-border-radius: 20px;
@@ -78,14 +80,14 @@ form{
   text-align: center;
   padding: 10px 10;
   cursor: pointer;
-  position:relative;
+  position: relative;
   font-weight: 500;
 }
 
 /* Лінія під кнопкою */
 .button::after {
   content: "";
-  display:block;
+  display: block;
   width: 130%;
   height: 3px;
   background-color: black;
@@ -99,14 +101,14 @@ form{
   -o-transition: opacity 0.3s ease;
 }
 
-#SignIn:checked + .button::after,
-#SignUp:checked + .button::after {
+#SignIn:checked+.button::after,
+#SignUp:checked+.button::after {
   opacity: 1;
 }
 
-.inputInfo{
+.inputInfo {
   text-align: center;
-  border-color:black;
+  border-color: black;
   border-width: 1px;
   border-radius: 20px;
   width: 80%;
@@ -115,4 +117,3 @@ form{
   -ms-border-radius: 20px;
   -o-border-radius: 20px;
 }
-

@@ -68,6 +68,8 @@ namespace SellCatcher.Api.Services
                         alreadyExist.ValidUntil = product.ValidUntil;
                         alreadyExist.IsBulk = product.IsBulk;
                         alreadyExist.BulkPrice = product.BulkPrice;
+                        alreadyExist.ImageUrl = product.ImageUrl;
+                        alreadyExist.StoreName = storeName;
                         alreadyExist.WhenUpdated = DateTime.Now;
                     }
                     else
@@ -76,7 +78,6 @@ namespace SellCatcher.Api.Services
                         /// Good creation
                         category.Products.Add(new Product
                         {
-                           
                             Name = product.Name,
                             Price = product.Price,
                             OldPrice = product.OldPrice,
@@ -86,6 +87,8 @@ namespace SellCatcher.Api.Services
                             Category = categoryName,
                             IsBulk = product.IsBulk,
                             BulkPrice = product.BulkPrice,
+                            ImageUrl = product.ImageUrl,
+                            StoreName = storeName,
                             WhenUpdated = DateTime.Now
                         });
                     }

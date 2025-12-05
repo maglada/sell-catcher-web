@@ -21,7 +21,7 @@ var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository("sellcatcher.db"));
-    
+
 builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddSingleton<ScraperFactory>();
@@ -44,7 +44,6 @@ var app = builder.Build();
 
 //var factory = app.Services.GetRequiredService<ScraperFactory>();
 
-//app.UseCors("LocalDev");
 //var filepatterns = new List<string> { "NovusLinks_*.txt", "SilpoLinks_*.txt" };
 
 //foreach (var pattern in filepatterns)
@@ -73,7 +72,8 @@ var app = builder.Build();
 
 
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+app.UseCors("LocalDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRouting();
