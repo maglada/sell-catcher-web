@@ -193,7 +193,8 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
 
         }
         [Test]
-        public async Task LoginWithNonExistingUser_ReturnsUnauthorized() {
+        public async Task LoginWithNonExistingUser_ReturnsUnauthorized()
+        {
             var request = new LoginRequestDto
             {
                 UserName = NonExistentUser,
@@ -204,6 +205,98 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
 
             Assert.That(result, Is.Not.Null);
             Assert.That(result.StatusCode, Is.EqualTo(401));
-        } 
+        }
+
+        [Test]
+        public async Task Login_SavesRefreshTokenToRepository()
+        {
+            var request = new LoginRequestDto
+            {
+                UserName = ValidUsername,
+                Password = ValidPassword
+            };
+
+            await _authController.Login(request);
+
+            _mockTokenRepo.Verify(
+                x => x.SaveRefreshTokenAsync(It.Is<RefreshToken>(t => t.AccountId == _testAccount.Id)),
+                Times.Once);
+
+        }
+        [Test]
+        public async Task Refresh_ValidRefreshToken_ReturnsNewTokens()
+        {
+            // Arrange
+            var loginRequest = new LoginRequestDto
+            {
+                UserName = ValidUsername,
+                Password = ValidPassword
+            };
+            var loginResult = await _authController.Login(loginRequest) as OkObjectResult;
+            var tokens = loginResult.Value as TokenResponseDto;
+            var refreshRequest = new RefreshRequestDto
+            {
+                RefreshToken = tokens.RefreshToken
+            };
+            // Act
+            var refreshResult = await _authController.Refresh(refreshRequest) as OkObjectResult;
+            // Assert
+            Assert.That(refreshResult, Is.Not.Null);
+            Assert.That(refreshResult.StatusCode, Is.EqualTo(200));
+            var newTokens = refreshResult.Value as TokenResponseDto;
+            Assert.That(newTokens, Is.Not.Null);
+            Assert.That(newTokens.AccessToken, Is.Not.Null.And.Not.Empty);
+            Assert.That(newTokens.RefreshToken, Is.Not.Null.And.Not.Empty);
+            Assert.That(newTokens.RefreshToken, Is.Not.EqualTo(tokens.RefreshToken));
+        }
+        [Test]
+        public async Task Refresh_InvalidRefreshToken_ReturnsUnauthorized()
+        {
+            var result = await _authController.Refresh(new RefreshRequestDto
+            {
+                RefreshToken = "fake_token_12345"
+            });
+
+            Assert.That(result, Is.InstanceOf<UnauthorizedObjectResult>());
+        }
+        [Test]
+        public async Task Logout_validToken()
+        {
+            var loginResult = await _authController.Login(new LoginRequestDto
+            {
+                UserName = ValidUsername,
+                Password = ValidPassword
+            }) as OkObjectResult;
+            var tokens = loginResult?.Value as TokenResponseDto;
+            var result = await _authController.Logout(new LogoutRequestDto
+            {
+                RefreshToken = tokens.RefreshToken
+            }) as OkObjectResult;
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        }
+
+        [Test]
+        public void GenerateTokens_ReturnsValidTokenPair()
+        {
+            var tokens = _jwtService.GenerateTokens(_testAccount);
+
+            Assert.That(tokens.AccessToken, Is.Not.Null.And.Not.Empty);
+            Assert.That(tokens.RefreshToken, Is.Not.Null.And.Not.Empty);
+            Assert.That(tokens.Jti, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void GetJtiFromAccessToken_ReturnsCorrectJti()
+        {
+            var tokens = _jwtService.GenerateTokens(_testAccount);
+            var extractedJti = _jwtService.GetJtiFromAccessToken(tokens.AccessToken);
+
+            Assert.That(extractedJti, Is.EqualTo(tokens.Jti));
+        }
+
+
+
     }
 }
+    
