@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDEs
+.vs
+.vscode
+*.swp
+*.swo
+*~
+.idea
+*.iml
+
+# Build outputs
+bin/
+obj/
+*.dll
+*.pdb
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test results
+*.trx
+.coverage
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Temporary files
+*.tmp
+*.temp
+*.log

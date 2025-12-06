@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # ASP.NET Core API
+  api:
+    build:
+      context: .
+      dockerfile: SellCatcher.Docker/Dockerfile.api
+    container_name: sellcatcher-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+    volumes:
+      - ./data:/app/data
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Blazor Frontend (nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: SellCatcher.Docker/Dockerfile.blazor
+    container_name: sellcatcher-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://api:5000
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Background Scraper Service (runs every 24 hours)
+  scraper:
+    build:
+      context: .
+      dockerfile: SellCatcher.Docker/Dockerfile.scraper
+    container_name: sellcatcher-scraper
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./data:/app/data
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    # The scraper will run in background and call the API every 24 hours
+    # It doesn't expose any ports since it's a background service
+
+networks:
+  sellcatcher-net:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
