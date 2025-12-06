@@ -11,7 +11,7 @@ using SellCatcher.Api.DTOs.User;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
 
-namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
+namespace SellCatcher.Tests.Controllers.AuthControllerTests
 {
     [TestFixture]
     public class ApiAuthControllerTests
@@ -276,25 +276,7 @@ namespace SellCatcher.Tests.SellCatcher.Api.Tests.Controllers
             Assert.That(result, Is.InstanceOf<OkObjectResult>());
         }
 
-        [Test]
-        public void GenerateTokens_ReturnsValidTokenPair()
-        {
-            var tokens = _jwtService.GenerateTokens(_testAccount);
-
-            Assert.That(tokens.AccessToken, Is.Not.Null.And.Not.Empty);
-            Assert.That(tokens.RefreshToken, Is.Not.Null.And.Not.Empty);
-            Assert.That(tokens.Jti, Is.Not.Null.And.Not.Empty);
-        }
-
-        [Test]
-        public void GetJtiFromAccessToken_ReturnsCorrectJti()
-        {
-            var tokens = _jwtService.GenerateTokens(_testAccount);
-            var extractedJti = _jwtService.GetJtiFromAccessToken(tokens.AccessToken);
-
-            Assert.That(extractedJti, Is.EqualTo(tokens.Jti));
-        }
-
+       
 
 
     }

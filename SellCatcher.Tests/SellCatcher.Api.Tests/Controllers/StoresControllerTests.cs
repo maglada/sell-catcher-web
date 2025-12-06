@@ -6,7 +6,7 @@ using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
 using System.Collections.Generic;
 
-namespace SellCatcher.Tests.Controllers
+namespace SellCatcher.Tests.Controllers.StoreControllerTests
 {
     [TestFixture]
     public class StoresControllerTests
