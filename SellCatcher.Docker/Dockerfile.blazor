@@ -1,27 +1,26 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-
-# Copy project files
 COPY ["SellCatcher.Blazor/SellCatcher.Blazor.csproj", "SellCatcher.Blazor/"]
 RUN dotnet restore "SellCatcher.Blazor/SellCatcher.Blazor.csproj"
-
-# Copy source code
 COPY . .
 WORKDIR "/src/SellCatcher.Blazor"
 RUN dotnet build "SellCatcher.Blazor.csproj" -c Release -o /app/build
 
 # Publish stage
-FROM build AS publish
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS publish
+WORKDIR /src
+COPY ["SellCatcher.Blazor/SellCatcher.Blazor.csproj", "SellCatcher.Blazor/"]
+RUN dotnet restore "SellCatcher.Blazor/SellCatcher.Blazor.csproj"
+COPY . .
+WORKDIR "/src/SellCatcher.Blazor"
 RUN dotnet publish "SellCatcher.Blazor.csproj" -c Release -o /app/publish
 
 # Runtime stage - ASP.NET Core serves Blazor WASM
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=publish /app/publish .
-
 EXPOSE 3000
 ENV ASPNETCORE_URLS=http://+:3000
 ENV ASPNETCORE_ENVIRONMENT=Production
-
 ENTRYPOINT ["dotnet", "SellCatcher.Blazor.dll"]
