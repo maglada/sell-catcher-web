@@ -57,14 +57,16 @@
 }
 
 .button-yellow {
-  width: 125px;
+  width: 150px;
   height: 35px;
   border-radius: 15px;
   background-color: rgb(233, 181, 10);
   border-style: hidden;
 }
 
-.iconbutton.img {}
+.iconbutton~img {
+  width: 1020px;
+}
 
 .iconbutton {
   background-color: #f1f1f185;

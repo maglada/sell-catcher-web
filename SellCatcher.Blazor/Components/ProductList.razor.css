@@ -109,8 +109,6 @@
 .pagination button[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
-<<<<<<< HEAD
-=======
 }
 
 
@@ -130,5 +128,4 @@
 .pagination button[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
->>>>>>> origin/feature-bd
 }

@@ -42,33 +42,33 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 
 var app = builder.Build();
 
-//var factory = app.Services.GetRequiredService<ScraperFactory>();
+var factory = app.Services.GetRequiredService<ScraperFactory>();
 
-//var filepatterns = new List<string> { "NovusLinks_*.txt", "SilpoLinks_*.txt" };
+var filepatterns = new List<string> { "NovusLinks_*.txt", "SilpoLinks_*.txt" };
 
-//foreach (var pattern in filepatterns)
-//{
-//    var results = await factory.ProcessAllFilesAsync(
-//        directory: Path.Combine(AppContext.BaseDirectory, "sites"),
-//        filePattern: pattern
-//    );
+foreach (var pattern in filepatterns)
+{
+  var results = await factory.ProcessAllFilesAsync(
+      directory: Path.Combine(AppContext.BaseDirectory, "sites"),
+      filePattern: pattern
+  );
 
-//    var productService = new ParserProductService.ProductService();
-//    int totalSaved = 0;
-//    int totalProducts = 0;
+  var productService = new ParserProductService.ProductService();
+  int totalSaved = 0;
+  int totalProducts = 0;
 
-//    foreach (var result in results)
-//    {
-//        string storeName = pattern.Contains("Novus") ? "Novus" : "Silpo";
-//        var products = result.Value;
-//        totalProducts += products.Count;
-//        int saved = productService.SaveProducts(products, storeName);
-//        totalSaved += saved;
-//    }
+  foreach (var result in results)
+  {
+    string storeName = pattern.Contains("Novus") ? "Novus" : "Silpo";
+    var products = result.Value;
+    totalProducts += products.Count;
+    int saved = productService.SaveProducts(products, storeName);
+    totalSaved += saved;
+  }
 
-//    Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
-//    Console.WriteLine($"Saved to DB: {totalSaved}\n");
-//}
+  Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
+  Console.WriteLine($"Saved to DB: {totalSaved}\n");
+}
 
 
 

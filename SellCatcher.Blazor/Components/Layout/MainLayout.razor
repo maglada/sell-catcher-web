@@ -8,21 +8,16 @@
         <div class="logo-block">
             @if (!IsHomePage)
             {
-                <div><a href="/">Лого</a></div>
+                <div><a href="/"><img src="icons/Logo.png" style="width:200px;" /></a></div>
             }
             @if (IsHomePage)
             {
-                <SimpleDropDownButton DropDownContent="
-                                    Риба та морепродукти|/categories/риба,
-                                    Яйця та молочні|/categories/яйця,
-                                    Фрукти та овочі|/categories/фрукти,
-                                    М’ясо та птиця|/categories/м’ясо,
-                                    Напівфабрикати|/categories/напівфабрикати,
-                                    Цигарки|/categories/цигарки,
-                                    Випічка|/categories/випічка">
+                <SimpleDropDownButton
+                    DropDownContent="
+                                Риба та морепродукти|/categories/риба,Яйця та молочні|/categories/яйця,Фрукти та овочі|/categories/фрукти,М’ясо та птиця|/categories/м’ясо,Напівфабрикати|/categories/напівфабрикати,Цигарки|/categories/цигарки,Випічка|/categories/випічка">
                     <img src="icons/layout-grid.svg" />
 
-                    <span>Каталог</span>
+                    <span style="font-weight: 600;">Каталог</span>
                 </SimpleDropDownButton>
 
             }
@@ -48,17 +43,12 @@
     {
         <header class="site-header-second">
             <div class="logo-block">
-                <SimpleDropDownButton DropDownContent="
-                                    Риба та морепродукти|/categories/риба,
-                                    Яйця та молочні|/categories/яйця,
-                                    Фрукти та овочі|/categories/фрукти,
-                                    М’ясо та птиця|/categories/м’ясо,
-                                    Напівфабрикати|/categories/напівфабрикати,
-                                    Цигарки|/categories/цигарки,
-                                    Випічка|/categories/випічка">
+                <SimpleDropDownButton
+                    DropDownContent="
+                            Риба та морепродукти|/categories/риба,Яйця та молочні|/categories/яйця,Фрукти та овочі|/categories/фрукти,М’ясо та птиця|/categories/м’ясо,Напівфабрикати|/categories/напівфабрикати,Цигарки|/categories/цигарки,Випічка|/categories/випічка">
                     <img src="icons/layout-grid.svg" />
 
-                    <span>Каталог</span>
+                    <span style="font-weight: 600;">Каталог</span>
                 </SimpleDropDownButton>
 
             </div>

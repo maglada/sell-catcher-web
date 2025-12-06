@@ -23,7 +23,7 @@
 
             <div>
                 <p>
-                    <strong>Ціна</strong>
+                    <strong class="category-name">Ціна</strong>
                     <input class="inputT" type="number" placeholder="@MinPrice" @bind="MinPrice" />
                     <span>–</span>
                     <input class="inputT" type="number" placeholder="@MaxPrice" @bind="MaxPrice" />
@@ -32,34 +32,40 @@
             </div>
 
             <div>
-                <p><strong>Магазин</strong></p>
+                <label class="category-name">Магазин</label>
 
-                <label class="nice-checkbox">
-                    <input type="checkbox" class="nice-checkbox-input" @bind="ShowNovus" />
-                    <span class="nice-checkbox-box"></span>
-                    <span class="nice-checkbox-text">Novus</span>
-                </label>
-
-                <label class="nice-checkbox">
-                    <input type="checkbox" class="nice-checkbox-input" @bind="ShowSILPO" />
-                    <span class="nice-checkbox-box"></span>
-                    <span class="nice-checkbox-text">SILPO</span>
-                </label>
+                <div class="checkbox-group">
+                    <label class="nice-checkbox">
+                        <input type="checkbox" class="nice-checkbox-input" @bind="ShowNovus" />
+                        <span class="nice-checkbox-box"></span>
+                        <span class="nice-checkbox-text">Новус</span>
+                    </label>
+                    <br />
+                    <label class="nice-checkbox">
+                        <input type="checkbox" class="nice-checkbox-input" @bind="ShowSILPO" />
+                        <span class="nice-checkbox-box"></span>
+                        <span class="nice-checkbox-text">Сільпо</span>
+                    </label>
+                </div>
             </div>
 
             <div class="filter-block">
-                <label>Категорії</label>
+                <label class="category-name">Категорії</label>
 
-                @foreach (var c in AvailableCategories)
-                {
-                    <label class="nice-checkbox" style="display:block;">
-                        <input type="checkbox" class="nice-checkbox-input" checked="@IsCategoryChecked(c)"
-                            @onchange="e => ToggleCategory(c, e)" />
-                        <span class="nice-checkbox-box"></span>
-                        <span class="nice-checkbox-text">@c.Name</span>
-                    </label>
-                }
+                <div class="checkbox-group">
+                    @foreach (var c in AvailableCategories)
+                    {
+                        <label class="nice-checkbox">
+                            <input type="checkbox" class="nice-checkbox-input" checked="@IsCategoryChecked(c)"
+                                @onchange="e => ToggleCategory(c, e)" />
+                            <span class="nice-checkbox-box"></span>
+                            <span class="nice-checkbox-text">@c.Name</span>
+                        </label>
+                        <br />
+                    }
+                </div>
             </div>
+
 
             <button class="search-button" @onclick="SearchAsync">
                 Пошук

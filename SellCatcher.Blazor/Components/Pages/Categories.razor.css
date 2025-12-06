@@ -5,6 +5,11 @@
   padding: 20px;
 }
 
+.category-name {
+  font-weight: 500;
+  font-size: 20px;
+}
+
 .search-bar-box {
   display: flex;
   justify-content: center;
@@ -45,7 +50,7 @@ div {
 .inputT {
   border: none;
   background-color: none;
-  width: 7vh;
+  width: 8vh;
 }
 
 .keyword-chips {
@@ -69,10 +74,25 @@ div {
   cursor: pointer;
 }
 
+.nice-checkbox-text {
+  display: inline-block;
+  line-height: 22px;
+  /* така ж висота, як .nice-checkbox-box */
+  margin: 0;
+  /* на всякий випадок прибираємо відступи */
+}
+
+
 .nice-checkbox-input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+}
+
+.nice-checkbox-text {
+  display: inline-block;
+  line-height: 2px;
+  margin: 0;
 }
 
 .nice-checkbox-box {

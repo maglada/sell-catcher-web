@@ -147,6 +147,7 @@
 
     private void ApplyFilters()
     {
+
         if (Products == null || !Products.Any())
         {
             FilteredProducts = new();
@@ -167,6 +168,10 @@
         FilteredProducts = Products
         .Where(p =>
         {
+            // 🔹 Ігнорувати продукти з ціною 0
+            if (p.Price <= 0)
+                return false;
+
             // 🔹 Дублюючий фільтр по ціні (можна залишити, щоб підстрахувати бекенд)
             if (p.Price < FilteredPriceMin || p.Price > FilteredPriceMax)
                 return false;
