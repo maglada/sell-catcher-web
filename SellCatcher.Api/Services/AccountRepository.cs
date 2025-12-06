@@ -14,7 +14,7 @@ namespace SellCatcher.Api.Services
             _col = _db.GetCollection<Account>("accounts");
             // Используем автоинкремент для Id
             _col.EnsureIndex(x => x.Id);
-            _col.EnsureIndex(x => x.UserName, true);
+            _col.EnsureIndex(x => x.UserName, unique: true);
         }
 
         public Account? GetByUserName(string userName)
@@ -28,9 +28,19 @@ namespace SellCatcher.Api.Services
             return _col.FindById(id);
         }
 
+        public Account? GetByEmail(string email)
+        {
+            return _col.FindOne(e => e.Email == email);
+        }
+        public List<Account> GetAll()
+        {
+            return _col.FindAll().ToList();
+        }
         public void Add(Account account)
         {
-            // Если Id == 0, LiteDB поставит новый авто-id
+            if (account.Id == Guid.Empty)
+                account.Id = Guid.NewGuid();
+
             _col.Insert(account);
         }
 
@@ -39,7 +49,7 @@ namespace SellCatcher.Api.Services
             _col.Update(account);
         }
 
-        public void Delete(int id)
+        public void Delete(Guid id)
         {
             _col.Delete(id);
         }

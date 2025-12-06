@@ -84,6 +84,7 @@ namespace ProductScraper
             };
 
             await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 90000 });
+            await page.WaitForTimeoutAsync(5000);
             // Find product card blocks
             IElementHandle[] els = Array.Empty<IElementHandle>();
             foreach (var sel in selectors)
