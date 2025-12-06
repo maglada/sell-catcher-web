@@ -18,9 +18,9 @@ namespace SellCatcher.Api.Controllers
         }
 
         [HttpGet] /*Эндпоинт получения всех скидок*/
-        public IActionResult GetAll()
+        public IActionResult GetAllSales()
         {
-           var discounts = _discountService.GetAll();
+           var discounts = _discountService.GetAllSales();
            return Ok(discounts);
         }
 
@@ -43,7 +43,7 @@ namespace SellCatcher.Api.Controllers
         public IActionResult GetActiveDiscounts()
         {
            var active = _discountService
-               .GetAll()
+               .GetAllSales()
                .Where(d => d.ValidUntil >= DateTime.UtcNow);
            return Ok(active);
         }
@@ -58,7 +58,7 @@ namespace SellCatcher.Api.Controllers
         [HttpGet("top")] /*Эндпоинт получения лучших скидок*/
         public IActionResult GetTopDeals()
         {
-           var topDeals = _discountService.GetAll()
+           var topDeals = _discountService.GetAllSales()
                .OrderByDescending(d => d.OldPrice - d.Price)
                .Take(2);
            return Ok(topDeals);
@@ -66,7 +66,7 @@ namespace SellCatcher.Api.Controllers
          [HttpGet("products")] /*Эндпоинт получения всех товаров*/
         public IActionResult GetAllProducts()
         {
-            var products = _discountService.GetAll();
+            var products = _discountService.GetAllProducts();
             return Ok(products);
         }
         [HttpGet("search")] /*Эндпоинт поиска скидок*/

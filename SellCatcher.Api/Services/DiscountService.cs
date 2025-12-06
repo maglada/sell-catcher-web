@@ -22,8 +22,15 @@ namespace SellCatcher.Api.Services
             _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
         }
 
+        public List<Product> GetAllProducts()
+        {
+            using var db = new LiteDatabase(_dbPath);
+            var stores = db.GetCollection<Store>("stores").FindAll();
 
-        public List<Product> GetAll()
+            return stores.SelectMany(s => s.Categories).SelectMany(c => c.Products).ToList();
+        }
+
+        public List<Product> GetAllSales()
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores").FindAll();
