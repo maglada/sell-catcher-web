@@ -111,7 +111,11 @@ namespace ProductScraper
                         {
                             var priceText = (await priceEl.InnerTextAsync())?.Trim() ?? "";
                             var m = Regex.Match(priceText, @"(\d+(?:[.,]\d+)?)");
-                            if (m.Success) prod.Price = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                            if (m.Success && decimal.TryParse(m.Value.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+                            {
+                                prod.Price = price;
+                            }
+                            //if (m.Success) prod.Price = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);   Вернуть если поламалась цена
                         }
                         // Bulk
                         var bulkPriceEl = await priceContainer.QuerySelectorAsync(".product-card-offer__price");
@@ -165,7 +169,7 @@ namespace ProductScraper
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(prod.Name))
+                    if (!string.IsNullOrWhiteSpace(prod.Name) && prod.Price > 0)
                     {
                         products.Add(prod);
 
