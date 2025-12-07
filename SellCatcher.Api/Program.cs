@@ -12,16 +12,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 var jwtLifetime = Environment.GetEnvironmentVariable("JWT_TOKEN_LIFETIME");
-var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
+var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "/app/data/sellcatcher.db";
+
+// Ensure database directory exists
+var dbDirectory = Path.GetDirectoryName(dbPath);
+if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+{
+    Directory.CreateDirectory(dbDirectory);
+}
 
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository("sellcatcher.db"));
+// Register with the correct database path
+builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository(dbPath));
 builder.Services.AddScoped<DiscountService>();
-builder.Services.AddScoped<AccountRepository>();
 builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddControllers();
-builder.Services.AddSingleton<ITokenRepository, LiteDbTokenRepository>();
+builder.Services.AddSingleton<ITokenRepository>(sp => new LiteDbTokenRepository(dbPath));
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();

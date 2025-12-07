@@ -10,8 +10,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000
-      # Allow requests from ngrok domains
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      - DB_PATH=/app/data/sellcatcher.db
     volumes:
       - ./data:/app/data
     networks:
@@ -34,7 +34,6 @@ services:
       - "3000:3000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      # Use your ngrok API URL here
       - API_URL=${NGROK_API_URL:-http://localhost:5000}
     networks:
       - sellcatcher-net
@@ -51,8 +50,11 @@ services:
     container_name: sellcatcher-scraper
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - DB_PATH=/app/data/sellcatcher.db
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
       - ./data:/app/data
+      - playwright-browsers:/ms-playwright  # Persist browsers between restarts
     networks:
       - sellcatcher-net
     restart: unless-stopped
@@ -66,4 +68,6 @@ networks:
 
 volumes:
   data:
+    driver: local
+  playwright-browsers:
     driver: local
