@@ -13,12 +13,14 @@ namespace SellCatcher.Api.Controllers
         private readonly ProductService _productService;
         private readonly ILogger<ScraperController> _logger;
 
+        // FIXED: Inject ProductService instead of creating new instance
         public ScraperController(
             ScraperFactory scraperFactory, 
+            ProductService productService,  // ← Added this parameter
             ILogger<ScraperController> logger)
         {
             _scraperFactory = scraperFactory;
-            _productService = new ProductService();
+            _productService = productService;  // ← Use injected service
             _logger = logger;
         }
 
@@ -34,7 +36,8 @@ namespace SellCatcher.Api.Controllers
 
                 if (!Directory.Exists(sitesDirectory))
                 {
-                    return NotFound(new { message = "Sites directory not found" });
+                    _logger.LogError("Sites directory not found: {Path}", sitesDirectory);
+                    return NotFound(new { message = "Sites directory not found", path = sitesDirectory });
                 }
 
                 // Process all Novus links
@@ -44,9 +47,10 @@ namespace SellCatcher.Api.Controllers
                 int totalNovus = 0;
                 foreach (var kvp in novusResults)
                 {
+                    _logger.LogInformation("Processing {Count} products from {File}", kvp.Value.Count, kvp.Key);
                     var count = _productService.SaveProducts(kvp.Value, "Novus");
                     totalNovus += count;
-                    _logger.LogInformation("Saved {Count} products from {File}", count, kvp.Key);
+                    _logger.LogInformation("✓ Saved {Count} products from {File}", count, kvp.Key);
                 }
 
                 // Process all Silpo links
@@ -56,10 +60,14 @@ namespace SellCatcher.Api.Controllers
                 int totalSilpo = 0;
                 foreach (var kvp in silpoResults)
                 {
+                    _logger.LogInformation("Processing {Count} products from {File}", kvp.Value.Count, kvp.Key);
                     var count = _productService.SaveProducts(kvp.Value, "Silpo");
                     totalSilpo += count;
-                    _logger.LogInformation("Saved {Count} products from {File}", count, kvp.Key);
+                    _logger.LogInformation("✓ Saved {Count} products from {File}", count, kvp.Key);
                 }
+
+                _logger.LogInformation("Scraper completed. Novus: {Novus}, Silpo: {Silpo}, Total: {Total}", 
+                    totalNovus, totalSilpo, totalNovus + totalSilpo);
 
                 return Ok(new
                 {
@@ -72,29 +80,40 @@ namespace SellCatcher.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Scraper failed");
-                return StatusCode(500, new { message = "Scraper failed", error = ex.Message });
+                _logger.LogError(ex, "Scraper failed: {Message}", ex.Message);
+                return StatusCode(500, new { 
+                    message = "Scraper failed", 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace 
+                });
             }
         }
 
         [HttpGet("status")]
         public IActionResult GetStatus()
         {
-            var productService = new ProductService();
-            var stores = productService.GetStores();
-            
-            var stats = stores.Select(s => new
+            try
             {
-                store = s.Name,
-                categories = s.Categories.Count,
-                totalProducts = s.Categories.Sum(c => c.Products.Count)
-            });
+                var stores = _productService.GetStores();
+                
+                var stats = stores.Select(s => new
+                {
+                    store = s.Name,
+                    categories = s.Categories.Count,
+                    totalProducts = s.Categories.Sum(c => c.Products.Count)
+                });
 
-            return Ok(new
+                return Ok(new
+                {
+                    stores = stats,
+                    lastUpdate = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
             {
-                stores = stats,
-                lastUpdate = DateTime.UtcNow
-            });
+                _logger.LogError(ex, "Failed to get scraper status");
+                return StatusCode(500, new { message = "Failed to get status", error = ex.Message });
+            }
         }
     }
 }

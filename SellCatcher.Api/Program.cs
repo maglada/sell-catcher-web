@@ -5,6 +5,7 @@ using ProductScraper;
 using SellCatcher.Api.DTOs;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
+using static SellCatcher.Api.Services.ParserProductService;
 
 DotNetEnv.Env.Load(".env");
 
@@ -21,14 +22,31 @@ if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
     Directory.CreateDirectory(dbDirectory);
 }
 
+// Log the database path being used
+Console.WriteLine($"=== Database Configuration ===");
+Console.WriteLine($"DB_PATH: {dbPath}");
+Console.WriteLine($"Directory exists: {Directory.Exists(dbDirectory)}");
+
 builder.Services.AddOpenApi();
 
-// Register with the correct database path
+// FIXED: Register ProductService as singleton with shared DB path
+builder.Services.AddSingleton<ProductService>(sp => 
+{
+    var logger = sp.GetRequiredService<ILogger<ProductService>>();
+    logger.LogInformation("Initializing ProductService with DB path: {DbPath}", dbPath);
+    return new ProductService();
+});
+
+// Register all services with correct DB path
 builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository(dbPath));
-builder.Services.AddScoped<DiscountService>();
+builder.Services.AddSingleton<ITokenRepository>(sp => new LiteDbTokenRepository(dbPath));
+
+// Register DiscountService as singleton to share DB instance
+builder.Services.AddSingleton<DiscountService>();
+
 builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddControllers();
-builder.Services.AddSingleton<ITokenRepository>(sp => new LiteDbTokenRepository(dbPath));
+
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
@@ -62,6 +80,20 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
+
+// Verify database accessibility on startup
+using (var scope = app.Services.CreateScope())
+{
+    var productService = scope.ServiceProvider.GetRequiredService<ProductService>();
+    var stores = productService.GetStores();
+    Console.WriteLine($"=== Database Check ===");
+    Console.WriteLine($"Stores found: {stores.Count}");
+    foreach (var store in stores)
+    {
+        var productCount = store.Categories.Sum(c => c.Products.Count);
+        Console.WriteLine($"  - {store.Name}: {productCount} products");
+    }
+}
 
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
