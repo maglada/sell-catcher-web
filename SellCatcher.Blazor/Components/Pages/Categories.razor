@@ -1,6 +1,8 @@
 @page "/categories"
 @page "/categories/{Category}"
+@using System
 @using System.Net
+@using Microsoft.AspNetCore.Components
 
 <div class="page-layout">
     <div class="sidebar-sticky">
@@ -56,16 +58,16 @@
                     @foreach (var c in AvailableCategories)
                     {
                         <label class="nice-checkbox">
-                            <input type="checkbox" class="nice-checkbox-input" checked="@IsCategoryChecked(c)"
-                                @onchange="e => ToggleCategory(c, e)" />
+                            <input type="checkbox" class="nice-checkbox-input"
+                                checked="@SelectedCategorySlugs.Contains(c.Slug)"
+                                @onchange="e => ToggleCategory(c.Slug, e)" />
                             <span class="nice-checkbox-box"></span>
-                            <span class="nice-checkbox-text">@c.Name</span>
+                            <span class="nice-checkbox-text">@c.DisplayName</span>
                         </label>
                         <br />
                     }
                 </div>
             </div>
-
 
             <button class="search-button" @onclick="SearchAsync">
                 Пошук
@@ -75,7 +77,8 @@
 
     <main class="content">
         <ProductList @ref="productList" FilteredPriceMin="MinPrice" FilteredPriceMax="MaxPrice"
-            FilteredShops="GetSelectedShops()" FilteredKeywords="Keywords" FilteredCategories="SelectedCategories" />
+            FilteredShops="GetSelectedShops()" FilteredKeywords="Keywords"
+            FilteredCategories="SelectedDbCategoryKeys" />
     </main>
 </div>
 
@@ -83,6 +86,8 @@
     private ProductList? productList;
 
     [Parameter] public string? Category { get; set; }
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private bool ShowSILPO = true;
     private bool ShowNovus = true;
@@ -92,10 +97,12 @@
     private string KeywordQuery { get; set; } = "";
     private List<string> Keywords { get; set; } = new();
 
-    private HashSet<string> SelectedCategories { get; set; } =
-    new(StringComparer.OrdinalIgnoreCase);
+    // тут зберігаємо тільки slug-и ("риба", "м’ясо", ...)
+    private HashSet<string> SelectedCategorySlugs { get; set; }
+    = new(StringComparer.OrdinalIgnoreCase);
 
-    public record CategoryModel(string Name, string Url, string[] DbKeys);
+    // Категорія: що показати користувачу, який slug в URL, і які DbKeys треба API
+    public record CategoryModel(string DisplayName, string Slug, string[] DbKeys);
 
     private static readonly List<CategoryModel> AvailableCategories = new()
 {
@@ -164,57 +171,68 @@ new[]
 ),
 };
 
+    // Те, що реально піде в API (DbKeys)
+    private IEnumerable<string> SelectedDbCategoryKeys =>
+    AvailableCategories
+    .Where(c => SelectedCategorySlugs.Contains(c.Slug))
+    .SelectMany(c => c.DbKeys)
+    .Distinct(StringComparer.OrdinalIgnoreCase);
+
     protected override void OnParametersSet()
     {
-        var newSelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // дефолти
+        MinPrice = 0;
+        MaxPrice = 1000;
+        ShowSILPO = true;
+        ShowNovus = true;
+
+        var newSelectedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var newKeywords = new List<string>();
 
+        // підтримка старого /categories/{Category}
         if (!string.IsNullOrWhiteSpace(Category))
         {
             var fromUrl = WebUtility.UrlDecode(Category).Trim().ToLowerInvariant();
 
             var match = AvailableCategories
-            .FirstOrDefault(c => c.Url.Equals(fromUrl, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(c => c.Slug.Equals(fromUrl, StringComparison.OrdinalIgnoreCase));
 
-            if (match != null)
+            if (match is not null)
             {
-                newSelected.UnionWith(match.DbKeys);
+                newSelectedSlugs.Add(match.Slug);
             }
             else
             {
                 newKeywords.Add(fromUrl);
-                KeywordQuery = fromUrl;
             }
         }
 
-        SelectedCategories = newSelected;
+        // розбір query string
+        ApplyFiltersFromUrl(newSelectedSlugs, newKeywords);
+
+        SelectedCategorySlugs = newSelectedSlugs;
         Keywords = newKeywords;
+
+        KeywordQuery = Keywords.Count > 0
+        ? string.Join(", ", Keywords)
+        : string.Empty;
     }
 
-    private bool IsCategoryChecked(CategoryModel cat) =>
-    cat.DbKeys.All(k => SelectedCategories.Contains(k));
-
-    private void ToggleCategory(CategoryModel cat, ChangeEventArgs e)
+    private void ToggleCategory(string slug, ChangeEventArgs e)
     {
         bool isChecked =
         e.Value is bool b
         ? b
         : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
 
-        var newSet = new HashSet<string>(SelectedCategories, StringComparer.OrdinalIgnoreCase);
+        var newSet = new HashSet<string>(SelectedCategorySlugs, StringComparer.OrdinalIgnoreCase);
 
         if (isChecked)
-        {
-            foreach (var key in cat.DbKeys)
-                newSet.Add(key);
-        }
+            newSet.Add(slug);
         else
-        {
-            foreach (var key in cat.DbKeys)
-                newSet.Remove(key);
-        }
+            newSet.Remove(slug);
 
-        SelectedCategories = newSet;
+        SelectedCategorySlugs = newSet;
     }
 
     private void OnKeywordChange(ChangeEventArgs e)
@@ -250,9 +268,126 @@ new[]
     {
         UpdateKeywordsList();
 
-        if (productList is not null)
+        var url = BuildFilterUrl();
+        Navigation.NavigateTo(url, forceLoad: true);
+
+        await Task.CompletedTask;
+    }
+
+    private string BuildFilterUrl()
+    {
+        var parts = new List<string>();
+
+        // price=100-500
+        if (MinPrice > 0 || MaxPrice < 1000)
         {
-            await productList.ReloadFromApiAsync();
+            parts.Add($"price={MinPrice}-{MaxPrice}");
         }
+
+        // shops=Novus,SILPO
+        var shops = GetSelectedShops().ToList();
+        if (shops.Count > 0)
+        {
+            var shopsParam = string.Join(",", shops.Select(s => Uri.EscapeDataString(s)));
+            parts.Add($"shops={shopsParam}");
+        }
+
+        // categories=риба,м’ясо,випічка (slug-и)
+        if (SelectedCategorySlugs.Any())
+        {
+            var catsParam = string.Join(
+            ",",
+            SelectedCategorySlugs.Select(v => Uri.EscapeDataString(v))
+            );
+            parts.Add($"categories={catsParam}");
+        }
+
+        // keywords=молоко,хліб
+        if (Keywords.Any())
+        {
+            var kws = string.Join(",", Keywords.Select(k => Uri.EscapeDataString(k)));
+            parts.Add($"keywords={kws}");
+        }
+
+        var query = string.Join("&", parts);
+
+        return string.IsNullOrEmpty(query)
+        ? "/categories"
+        : $"/categories?{query}";
+    }
+
+    private void ApplyFiltersFromUrl(HashSet<string> selectedSlugs, List<string> keywords)
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query;
+
+        if (string.IsNullOrWhiteSpace(query))
+            return;
+
+        var parameters = ParseQuery(query);
+
+        // price=100-500
+        if (parameters.TryGetValue("price", out var priceValue))
+        {
+            var parts = priceValue.Split('-', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                if (int.TryParse(parts[0], out var min))
+                    MinPrice = min;
+                if (int.TryParse(parts[1], out var max))
+                    MaxPrice = max;
+            }
+        }
+
+        // shops=Novus,SILPO
+        if (parameters.TryGetValue("shops", out var shopsValue))
+        {
+            var set = shopsValue
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            ShowSILPO = set.Contains("SILPO");
+            ShowNovus = set.Contains("Novus");
+        }
+
+        // categories=риба,м’ясо (slug-и)
+        if (parameters.TryGetValue("categories", out var catsValue))
+        {
+            var values = catsValue
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(v => Uri.UnescapeDataString(v.Trim()));
+
+            foreach (var v in values)
+                selectedSlugs.Add(v);
+        }
+
+        // keywords=молоко,хліб
+        if (parameters.TryGetValue("keywords", out var kwValue))
+        {
+            var kwTokens = kwValue
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(k => Uri.UnescapeDataString(k.Trim()));
+
+            keywords.AddRange(kwTokens);
+        }
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 0)
+                continue;
+
+            var key = Uri.UnescapeDataString(kv[0]);
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "";
+            dict[key] = value;
+        }
+
+        return dict;
     }
 }

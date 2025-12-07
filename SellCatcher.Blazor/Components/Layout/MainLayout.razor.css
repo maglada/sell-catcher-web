@@ -9,33 +9,27 @@
 .site-header {
   display: flex;
   justify-content: space-between;
-  /* Лого зліва, іконки справа */
   align-items: center;
-  /* Вирівняти по вертикалі */
   background-color: #f1f1f185;
   color: white;
   padding: 10px 20px;
-  height: 70px;
 }
 
 .site-header-second {
-  display: flex;
-  justify-content: space-between;
-  /* Лого зліва, іконки справа */
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  /* Вирівняти по вертикалі */
+  column-gap: 20px;
   background-color: #ffffff;
   color: white;
   padding: 10px 20px;
-  height: 70px;
 }
+
 
 .logo-block {
   display: flex;
   align-items: center;
-  /* "Лого" і кнопка по одній лінії */
   gap: 15px;
-  /* відстань між ними */
 }
 
 .site-footer {
@@ -64,11 +58,60 @@
   border-style: hidden;
 }
 
-.iconbutton~img {
-  width: 1020px;
-}
-
 .iconbutton {
   background-color: #f1f1f185;
+  width: 15vh;
   border: none;
+}
+
+.header-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 20px;
+}
+
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-grid-second {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 20px;
+  padding: 10px 20px;
+}
+
+.header-second-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-second-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header-second-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }

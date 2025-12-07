@@ -49,9 +49,12 @@ div {
 
 .inputT {
   border: none;
-  background-color: none;
-  width: 8vh;
+  width: auto;
+  min-width: 1ch;
+  max-width: 6ch;
+  text-align: center;
 }
+
 
 .keyword-chips {
   display: flex;
