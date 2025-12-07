@@ -34,9 +34,17 @@ namespace SellCatcher.Api.Controllers
         [HttpGet("{id:guid}")] /*Эндпоинт получения скидки по ID*/
         public IActionResult GetById(Guid id)
         {
-           var discount = _discountService.GetById(id);
+           var discount = _discountService.GetByIdSale(id);
            if (discount == null) return NotFound();
            return Ok(discount);
+        }
+
+        [HttpGet("products/{id:guid}")] /*Эндпоинт получения любого товара по ID*/
+        public IActionResult GetByIdProduct(Guid id)
+        {
+            var discount = _discountService.GetByIdSale(id);
+            if (discount == null) return NotFound();
+            return Ok(discount);
         }
 
         [HttpGet("active")] /*Эндпоинт получения активных скидок*/
