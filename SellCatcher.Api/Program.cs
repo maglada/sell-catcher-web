@@ -22,14 +22,13 @@ if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
     Directory.CreateDirectory(dbDirectory);
 }
 
-// Log the database path being used
-Console.WriteLine($"=== Database Configuration ===");
+Console.WriteLine($"=== Configuration ===");
 Console.WriteLine($"DB_PATH: {dbPath}");
-Console.WriteLine($"Directory exists: {Directory.Exists(dbDirectory)}");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 
 builder.Services.AddOpenApi();
 
-// FIXED: Register ProductService as singleton with shared DB path
+// Register services
 builder.Services.AddSingleton<ProductService>(sp => 
 {
     var logger = sp.GetRequiredService<ILogger<ProductService>>();
@@ -37,13 +36,9 @@ builder.Services.AddSingleton<ProductService>(sp =>
     return new ProductService();
 });
 
-// Register all services with correct DB path
 builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository(dbPath));
 builder.Services.AddSingleton<ITokenRepository>(sp => new LiteDbTokenRepository(dbPath));
-
-// Register DiscountService as singleton to share DB instance
 builder.Services.AddSingleton<DiscountService>();
-
 builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddControllers();
 
@@ -52,26 +47,38 @@ builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddScoped<StoreService>();
-
-// CORS for ngrok
-builder.Services.AddCors(o => o.AddPolicy("NgrokPolicy", p =>
-{
-    p.SetIsOriginAllowed(origin => 
-        origin.Contains("ngrok-free.app") || 
-        origin.Contains("ngrok.io") ||
-        origin.Contains("localhost"))
-     .AllowAnyHeader()
-     .AllowAnyMethod()
-     .AllowCredentials();
-}));
-
 builder.Services.AddScoped<AccountService>();
+
+// CRITICAL: Enhanced CORS for Docker + local development
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+    
+    // Specific policy for production with credentials
+    options.AddPolicy("Production", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5182",
+                "http://frontend:3000"
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Add health checks
 builder.Services.AddHealthChecks();
 
-// Configure forwarded headers for ngrok
+// Configure forwarded headers
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.All;
@@ -81,30 +88,40 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-// Verify database accessibility on startup
+// Database verification
 using (var scope = app.Services.CreateScope())
 {
-    var productService = scope.ServiceProvider.GetRequiredService<ProductService>();
-    var stores = productService.GetStores();
-    Console.WriteLine($"=== Database Check ===");
-    Console.WriteLine($"Stores found: {stores.Count}");
-    foreach (var store in stores)
+    try
     {
-        var productCount = store.Categories.Sum(c => c.Products.Count);
-        Console.WriteLine($"  - {store.Name}: {productCount} products");
+        var productService = scope.ServiceProvider.GetRequiredService<ProductService>();
+        var stores = productService.GetStores();
+        Console.WriteLine($"=== Database Status ===");
+        Console.WriteLine($"Stores: {stores.Count}");
+        foreach (var store in stores)
+        {
+            var productCount = store.Categories.Sum(c => c.Products.Count);
+            Console.WriteLine($"  - {store.Name}: {productCount} products");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ Database verification failed: {ex.Message}");
     }
 }
 
 app.UseForwardedHeaders();
+
+// CRITICAL: CORS must be BEFORE routing and auth
+app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
+
 app.UseHttpsRedirection();
-app.UseCors("NgrokPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRouting();
 
-// Map health checks
+// Map endpoints
 app.MapHealthChecks("/health");
-
 app.MapControllers();
 
+Console.WriteLine("🚀 API starting on http://+:5000");
 app.Run();

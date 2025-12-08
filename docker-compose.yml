@@ -12,8 +12,11 @@ services:
       - ASPNETCORE_URLS=http://+:5000
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
       - DB_PATH=/app/data/sellcatcher.db
+      # CRITICAL: Allow all origins for development
+      - CORS_ORIGINS=*
     volumes:
       - ./data:/app/data
+      - playwright-cache:/ms-playwright  # Share Playwright cache
     networks:
       - sellcatcher-net
     restart: unless-stopped
@@ -22,7 +25,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 90s  # Give more time for first startup
 
   # Blazor Frontend
   frontend:
@@ -34,7 +37,8 @@ services:
       - "3000:3000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - API_URL=${NGROK_API_URL:-http://localhost:5000}
+      # CRITICAL: Use Docker network name for API
+      - API_URL=http://api:5000
     networks:
       - sellcatcher-net
     restart: unless-stopped
@@ -42,7 +46,7 @@ services:
       api:
         condition: service_healthy
 
-  # Background Scraper Service (runs every 24 hours)
+  # Background Scraper Service
   scraper:
     build:
       context: .
@@ -54,7 +58,7 @@ services:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
       - ./data:/app/data
-      - playwright-browsers:/ms-playwright  # Persist browsers between restarts
+      - playwright-cache:/ms-playwright  # Share Playwright cache with API
     networks:
       - sellcatcher-net
     restart: unless-stopped
@@ -69,5 +73,5 @@ networks:
 volumes:
   data:
     driver: local
-  playwright-browsers:
+  playwright-cache:  # Renamed and shared between services
     driver: local
