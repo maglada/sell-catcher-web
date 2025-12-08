@@ -19,11 +19,10 @@ RUN dotnet publish "SellCatcher.Api.csproj" -c Release -o /app/publish /p:UseApp
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Install system dependencies for Playwright and wget for health checks
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (including wget for health checks and curl for scraper)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
-    gnupg \
     ca-certificates \
     fonts-liberation \
     libasound2 \
@@ -54,30 +53,40 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create Playwright cache directory
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN mkdir -p /ms-playwright
 
 # Copy published app
 COPY --from=publish /app/publish .
 
-# EXPLICITLY copy the sites folder to ensure it's included
+# Install Playwright CLI tool
+RUN dotnet tool install --global Microsoft.Playwright.CLI || true
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Copy sites folder explicitly
 COPY SellCatcher.Api/Services/Scraper/sites /app/Services/Scraper/sites
 
-# Verify the sites folder is present
+# Verify sites folder
 RUN echo "=== Verifying sites folder ===" && \
     ls -la /app/Services/Scraper/sites/ && \
     echo "=== Counting txt files ===" && \
     find /app/Services/Scraper/sites/ -name "*.txt" | wc -l
 
-# Copy the entrypoint script
-COPY SellCatcher.Docker/api-entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy and prepare entrypoint script
+COPY SellCatcher.Docker/scraper-entrypoint.sh /app/entrypoint.sh
+
+# Fix line endings and make executable
+RUN sed -i 's/\r$//' /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh && \
+    echo "=== Entrypoint script ===" && \
+    head -5 /app/entrypoint.sh
 
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
+# Simpler healthcheck (scraper doesn't actually serve HTTP, but shares API image)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
+  CMD pgrep -f entrypoint.sh > /dev/null || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
