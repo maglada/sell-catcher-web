@@ -1,82 +1,128 @@
 ﻿using DotNetEnv;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.HttpOverrides;
 using ProductScraper;
 using SellCatcher.Api.DTOs;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
-
+using static SellCatcher.Api.Services.ParserProductService;
 
 DotNetEnv.Env.Load(".env");
 
-
 var builder = WebApplication.CreateBuilder(args);
-
 
 var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 var jwtLifetime = Environment.GetEnvironmentVariable("JWT_TOKEN_LIFETIME");
-var dbPath = Environment.GetEnvironmentVariable("DB_PATH");
+var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "/app/data/sellcatcher.db";
 
+// Ensure database directory exists
+var dbDirectory = Path.GetDirectoryName(dbPath);
+if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+{
+    Directory.CreateDirectory(dbDirectory);
+}
 
+Console.WriteLine($"=== Configuration ===");
+Console.WriteLine($"DB_PATH: {dbPath}");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository("sellcatcher.db"));
+// Register services
+builder.Services.AddSingleton<ProductService>(sp => 
+{
+    var logger = sp.GetRequiredService<ILogger<ProductService>>();
+    logger.LogInformation("Initializing ProductService with DB path: {DbPath}", dbPath);
+    return new ProductService();
+});
 
-builder.Services.AddScoped<DiscountService>();
-builder.Services.AddScoped<AccountRepository>();
+builder.Services.AddSingleton<AccountRepository>(sp => new AccountRepository(dbPath));
+builder.Services.AddSingleton<ITokenRepository>(sp => new LiteDbTokenRepository(dbPath));
+builder.Services.AddSingleton<DiscountService>();
 builder.Services.AddSingleton<ScraperFactory>();
 builder.Services.AddControllers();
-builder.Services.AddSingleton<ITokenRepository, LiteDbTokenRepository>();
+
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("AuthSettings"));
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddScoped<StoreService>();
-builder.Services.AddCors(o => o.AddPolicy("LocalDev", p =>
-  p.WithOrigins("http://localhost:5182")
-  .AllowAnyHeader()
-  .AllowAnyMethod()
-  .AllowCredentials()));
 builder.Services.AddScoped<AccountService>();
+
+// CRITICAL: Enhanced CORS for Docker + local development
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+    
+    // Specific policy for production with credentials
+    options.AddPolicy("Production", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5182",
+                "http://frontend:3000"
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+// Add health checks
+builder.Services.AddHealthChecks();
+
+// Configure forwarded headers
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.All;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var app = builder.Build();
 
-// var factory = app.Services.GetRequiredService<ScraperFactory>();
+// Database verification
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var productService = scope.ServiceProvider.GetRequiredService<ProductService>();
+        var stores = productService.GetStores();
+        Console.WriteLine($"=== Database Status ===");
+        Console.WriteLine($"Stores: {stores.Count}");
+        foreach (var store in stores)
+        {
+            var productCount = store.Categories.Sum(c => c.Products.Count);
+            Console.WriteLine($"  - {store.Name}: {productCount} products");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ Database verification failed: {ex.Message}");
+    }
+}
 
-// var filepatterns = new List<string> { "NovusLinks_*.txt", "SilpoLinks_*.txt" };
+app.UseForwardedHeaders();
 
-// foreach (var pattern in filepatterns)
-// {
-//   var results = await factory.ProcessAllFilesAsync(
-//       directory: Path.Combine(AppContext.BaseDirectory, "sites"),
-//       filePattern: pattern
-//   );
-
-//   var productService = new ParserProductService.ProductService();
-//   int totalSaved = 0;
-//   int totalProducts = 0;
-
-//   foreach (var result in results)
-//   {
-//     string storeName = pattern.Contains("Novus") ? "Novus" : "Silpo";
-//     var products = result.Value;
-//     totalProducts += products.Count;
-//     int saved = productService.SaveProducts(products, storeName);
-//     totalSaved += saved;
-//   }
-
-//   Console.WriteLine($"\nTotal products parsed: {totalProducts} from pattern {pattern}");
-//   Console.WriteLine($"Saved to DB: {totalSaved}\n");
-// }
-
-
+// CRITICAL: CORS must be BEFORE routing and auth
+app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
 
 // app.UseHttpsRedirection();
 app.UseCors("LocalDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRouting();
+
+// Map endpoints
+app.MapHealthChecks("/health");
 app.MapControllers();
 
+Console.WriteLine("🚀 API starting on http://+:5000");
 app.Run();

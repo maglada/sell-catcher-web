@@ -7,20 +7,51 @@ using LiteDB;
 using SellCatcher.Api.Models;
 using ProductScraper;
 
-namespace SellCatcher.Api.Services
+public class DiscountService
 {
-    public class DiscountService
+    private readonly string _dbPath;
+
+    public DiscountService()
     {
-        private readonly string _dbPath;
-
-        public DiscountService()
+        // Check multiple possible database locations
+        var possiblePaths = new[]
         {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            "/app/data/sellcatcher.db",                                    // Docker volume path
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sellcatcher.db"),
+            Path.Combine(Directory.GetCurrentDirectory(), "sellcatcher.db"),
+            "sellcatcher.db"
+        };
 
-            var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+        foreach (var path in possiblePaths)
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
 
-            _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
+                // Test if we can access it
+                using var testDb = new LiteDatabase(path);
+                _dbPath = path;
+                Console.WriteLine($"DiscountService using database at: {_dbPath}");
+                return;
+            }
+            catch
+            {
+                continue;
+            }
         }
+
+        // Fallback
+        _dbPath = "/app/data/sellcatcher.db";
+        var dir = Path.GetDirectoryName(_dbPath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+    }
 
         public List<Product> GetAllProducts()
         {
@@ -138,4 +169,4 @@ namespace SellCatcher.Api.Services
         }
 
     }
-}
+

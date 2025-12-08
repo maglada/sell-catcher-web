@@ -16,13 +16,59 @@ namespace SellCatcher.Api.Services
         {
             /// Where is the database
             private readonly string _dbPath;
+            
             public ProductService()
             {
-                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                // Check multiple possible database locations
+                var possiblePaths = new[]
+                {
+                    "/app/data/sellcatcher.db",                                    // Docker volume path
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sellcatcher.db"), // App directory
+                    Path.Combine(Directory.GetCurrentDirectory(), "sellcatcher.db"), // Current directory
+                    "sellcatcher.db"                                                // Relative path (fallback)
+                };
 
-                var DBPlace = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
+                foreach (var path in possiblePaths)
+                {
+                    var directory = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(directory);
+                        }
+                        catch { continue; }
+                    }
 
-                _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
+                    try
+                    {
+                        // Try to use this path
+                        _dbPath = path;
+                        
+                        // Test if we can access it
+                        using var db = new LiteDatabase(_dbPath);
+                        var stores = db.GetCollection<Store>("stores");
+                        stores.EnsureIndex(x => x.Name);
+                        
+                        Console.WriteLine($"Using database at: {_dbPath}");
+                        return; // Success!
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to use path {path}: {ex.Message}");
+                        continue;
+                    }
+                }
+
+                // Fallback to /app/data/sellcatcher.db (will be created)
+                _dbPath = "/app/data/sellcatcher.db";
+                var dir = Path.GetDirectoryName(_dbPath);
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                
+                Console.WriteLine($"Using fallback database path: {_dbPath}");
             }
 
             /// <summary>

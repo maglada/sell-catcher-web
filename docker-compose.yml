@@ -1,0 +1,77 @@
+services:
+  # ASP.NET Core API
+  api:
+    build:
+      context: .
+      dockerfile: SellCatcher.Docker/Dockerfile.api
+    container_name: sellcatcher-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      - DB_PATH=/app/data/sellcatcher.db
+      # CRITICAL: Allow all origins for development
+      - CORS_ORIGINS=*
+    volumes:
+      - ./data:/app/data
+      - playwright-cache:/ms-playwright  # Share Playwright cache
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s  # Give more time for first startup
+
+  # Blazor Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: SellCatcher.Blazor/Dockerfile
+    container_name: sellcatcher-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # CRITICAL: Use Docker network name for API
+      - API_URL=http://api:5000
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Background Scraper Service
+  scraper:
+    build:
+      context: .
+      dockerfile: SellCatcher.Docker/Dockerfile.scraper
+    container_name: sellcatcher-scraper
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DB_PATH=/app/data/sellcatcher.db
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./data:/app/data
+      - playwright-cache:/ms-playwright  # Share Playwright cache with API
+    networks:
+      - sellcatcher-net
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  sellcatcher-net:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
+  playwright-cache:  # Renamed and shared between services
+    driver: local

@@ -2,16 +2,14 @@ using Microsoft.Playwright;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ProductScraper
 {
     /// <summary>
-    /// Web scraper for extracting product information from Silpo/ATB online catalog.
+    /// Web scraper for extracting product information from Silpo online catalog.
     /// Supports extraction of regular prices, sale prices, bulk pricing, and product metadata.
     /// Uses parallel page loading (3 pages at once)
     /// </summary>
@@ -34,8 +32,6 @@ namespace ProductScraper
         /// Main method that initializes browser context and starts parallel scraping
         public async Task<List<Product>> ScrapeAsync(List<string> catalogUrls)
         {
-            var products = new List<Product>();
-
             using var playwright = await Playwright.CreateAsync();
             
             await using var browser = await playwright.Firefox.LaunchAsync(new BrowserTypeLaunchOptions
@@ -44,7 +40,8 @@ namespace ProductScraper
                 SlowMo = _config.SlowMo
             });
 
-            Console.WriteLine($"Launching Firefox headless? {_config.Headless}");
+            if (_config.EnableLogging)
+                Console.WriteLine($"Launching Firefox headless? {_config.Headless}");
 
             // Configure browser context with Ukrainian locale and anti-detection measures
             var context = await browser.NewContextAsync(new BrowserNewContextOptions
@@ -56,137 +53,194 @@ namespace ProductScraper
                 ViewportSize = new ViewportSize { Width = 1366, Height = 768 },
                 ExtraHTTPHeaders = new Dictionary<string, string>
                 {
+                    ["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                     ["Accept-Language"] = "uk-UA,uk;q=0.9",
-                    ["Referer"] = "https://www.atbmarket.com/"
+                    ["Referer"] = "https://silpo.ua/",
+                    ["Cache-Control"] = "no-cache"
                 }
             });
+
             // Disable webdriver fingerprint
             await context.AddInitScriptAsync(@"
                 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             ");
+
             // Start parallel scraping
             var result = await ScrapeCatalogsInParallelAsync(catalogUrls, context);
 
             await context.CloseAsync();
             return result;
         }
+
         /// Parses a single catalog page and extracts product card elements
         private async Task<List<Product>> ScrapeCatalogPageAsync(IPage page, string url)
         {
             var products = new List<Product>();
-            // Product container selectors
-            var selectors = new[]
-            {
-                "[class*='catalog-item__bottom']",
-                ".product-tile[data-testid*='product']",
-                ".product-card",
-                "[class*='ProductTile']"
-            };
+            
+            // Main product card selector based on your HTML
+            var productSelector = "article.product-card";
 
-            await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 90000 });
-            await page.WaitForTimeoutAsync(5000);
-            // Find product card blocks
-            IElementHandle[] els = Array.Empty<IElementHandle>();
-            foreach (var sel in selectors)
+            try
             {
-                var items = await page.QuerySelectorAllAsync(sel);
-                if (items.Count > 0) { els = items.ToArray(); break; }
-            }
+                await page.GotoAsync(url, new PageGotoOptions { 
+                    WaitUntil = WaitUntilState.DOMContentLoaded, 
+                    Timeout = 90000 
+                });
 
-            foreach (var el in els)
-            {
-                try
+                // Wait for product cards to load
+                await page.WaitForSelectorAsync(productSelector, new PageWaitForSelectorOptions { Timeout = 30000 });
+
+                var productElements = await page.QuerySelectorAllAsync(productSelector);
+                
+                if (_config.EnableLogging)
+                    Console.WriteLine($"Found {productElements.Count} products on {url}");
+
+                foreach (var el in productElements)
                 {
-                    var prod = new Product { Category = _category };
-                    // Extract name
-                    var nameEl = await el.QuerySelectorAsync(".product-card__title");
-                    prod.Name = (await nameEl?.InnerTextAsync())?.Trim() ?? "";
-                    // Price block
-                    var priceContainer = await el.QuerySelectorAsync(".product-card-price");
-                    if (priceContainer != null)
+                    try
                     {
-                        // Base price
-                        var priceEl = await priceContainer.QuerySelectorAsync(".product-card-price__displayPrice");
-                        if (priceEl != null)
-                        {
-                            var priceText = (await priceEl.InnerTextAsync())?.Trim() ?? "";
-                            var m = Regex.Match(priceText, @"(\d+(?:[.,]\d+)?)");
-                            if (m.Success && decimal.TryParse(m.Value.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
-                            {
-                                prod.Price = price;
-                            }
-                            //if (m.Success) prod.Price = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);   Вернуть если поламалась цена
-                        }
-                        // Bulk
-                        var bulkPriceEl = await priceContainer.QuerySelectorAsync(".product-card-offer__price");
-                        if (bulkPriceEl != null)
-                        {
-                            var bulkText = (await bulkPriceEl.InnerTextAsync())?.Trim() ?? "";
-                            var m = Regex.Match(bulkText, @"(\d+(?:[.,]\d+)?)");
-                            if (m.Success)
-                            {
-                                prod.BulkPrice = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
-                                prod.IsBulk = true;
-                            }
-                        }
-                    }
-                    // Old Price → Indicates sale
-                    var oldPriceEl = await el.QuerySelectorAsync(".product-card-price__displayOldPrice");
-                    if (oldPriceEl != null)
-                    {
-                        var oldPriceText = (await oldPriceEl.InnerTextAsync())?.Trim() ?? "";
-                        var m = Regex.Match(oldPriceText, @"(\d+(?:[.,]\d+)?)");
-                        if (m.Success)
-                        {
-                            prod.OldPrice = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
-                            prod.IsOnSale = prod.OldPrice > prod.Price;
-                        }
-                    }
-                    // Discount text
-                    var discountEl = await el.QuerySelectorAsync(".product-card-price__sale");
-                    if (discountEl != null)
-                        prod.Discount = (await discountEl.InnerTextAsync())?.Trim() ?? "";
-                    // Weight 
-                    var weightEl = await el.QuerySelectorAsync(".ft-typo-14-semibold span");
-                    if (weightEl != null)
-                    {
-                        var w = (await weightEl.InnerTextAsync())?.Trim() ?? "";
-                        prod.Name = $"{prod.Name} ({w})";
-                    }
+                        var prod = new Product { Category = _category };
 
-                    // Get image url 
-                    var imgEl = await el.QuerySelectorAsync("a.product-card__link img");
-                    string? imgSrc = null;
-                    if (imgEl != null)
-                    {
-                        // Try src first, then data-src for lazy loading
-                        imgSrc = await imgEl.GetAttributeAsync("src") ?? await imgEl.GetAttributeAsync("data-src") ?? "";
-                        prod.ImageUrl = imgSrc;
-
-                        if (string.IsNullOrEmpty(imgSrc))
+                        // Extract product name from h3.product-card__title
+                        var nameEl = await el.QuerySelectorAsync("h3.product-card__title");
+                        if (nameEl != null)
                         {
-                            Console.WriteLine($"WARNING: No image URL found for {prod.Name}");
+                            prod.Name = (await nameEl.InnerTextAsync())?.Trim() ?? "";
+                        }
+
+                        if (string.IsNullOrWhiteSpace(prod.Name))
+                            continue;
+
+                        // Extract weight/volume info
+                        var weightEl = await el.QuerySelectorAsync(".ft-typo-14-semibold span, .ft-typo-16-semibold span");
+                        if (weightEl != null)
+                        {
+                            var weight = (await weightEl.InnerTextAsync())?.Trim() ?? "";
+                            if (!string.IsNullOrWhiteSpace(weight))
+                                prod.Name = $"{prod.Name}, {weight}";
+                        }
+
+                        // Extract prices from .product-card-price container
+                        var priceContainer = await el.QuerySelectorAsync(".product-card-price");
+                        if (priceContainer != null)
+                        {
+                            // Current price (displayPrice)
+                            var priceEl = await priceContainer.QuerySelectorAsync(".product-card-price__displayPrice");
+                            if (priceEl != null)
+                            {
+                                var priceText = (await priceEl.InnerTextAsync())?.Trim() ?? "";
+                                // Extract numeric value (handle format like "44.89 грн")
+                                var m = Regex.Match(priceText, @"(\d+(?:[.,]\d+)?)");
+                                if (m.Success)
+                                {
+                                    prod.Price = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                                }
+                            }
+
+                            // Old price (if on sale)
+                            var oldPriceEl = await priceContainer.QuerySelectorAsync(".product-card-price__displayOldPrice");
+                            if (oldPriceEl != null)
+                            {
+                                var oldPriceText = (await oldPriceEl.InnerTextAsync())?.Trim() ?? "";
+                                var m = Regex.Match(oldPriceText, @"(\d+(?:[.,]\d+)?)");
+                                if (m.Success)
+                                {
+                                    prod.OldPrice = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                                    prod.IsOnSale = prod.OldPrice > prod.Price;
+                                }
+                            }
+
+                            // Discount percentage
+                            var discountEl = await priceContainer.QuerySelectorAsync(".product-card-price__sale");
+                            if (discountEl != null)
+                            {
+                                prod.Discount = (await discountEl.InnerTextAsync())?.Trim() ?? "";
+                            }
+
+                            // Bulk/offer price
+                            var bulkPriceEl = await priceContainer.QuerySelectorAsync(".product-card-offer__price");
+                            if (bulkPriceEl != null)
+                            {
+                                var bulkText = (await bulkPriceEl.InnerTextAsync())?.Trim() ?? "";
+                                var m = Regex.Match(bulkText, @"(\d+(?:[.,]\d+)?)");
+                                if (m.Success)
+                                {
+                                    prod.BulkPrice = decimal.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                                    prod.IsBulk = true;
+                                }
+                            }
+                        }
+
+                        // Extract image URL
+                        var imgEl = await el.QuerySelectorAsync("a.product-card__link img.product-card__product-img");
+                        if (imgEl != null)
+                        {
+                            var imgSrc = await imgEl.GetAttributeAsync("src") ?? 
+                                        await imgEl.GetAttributeAsync("data-src") ?? "";
+                            prod.ImageUrl = imgSrc;
+                        }
+
+                        // Extract rating (optional)
+                        var ratingEl = await el.QuerySelectorAsync(".catalog-card-rating--value");
+                        if (ratingEl != null)
+                        {
+                            var ratingText = (await ratingEl.InnerTextAsync())?.Trim() ?? "";
+                            if (decimal.TryParse(ratingText.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal rating))
+                            {
+                                // You can add a Rating property to Product class if needed
+                            }
+                        }
+
+                        // Only add if we have essential data
+                        if (!string.IsNullOrWhiteSpace(prod.Name) && prod.Price > 0)
+                        {
+                            products.Add(prod);
+
+                            if (_config.EnableLogging)
+                            {
+                                Console.WriteLine($"Added: {prod.Name} — {prod.Price}грн");
+                                
+                                if (!string.IsNullOrEmpty(prod.ImageUrl))
+                                    Console.WriteLine($"  Image: {prod.ImageUrl}");
+                                
+                                if (prod.IsBulk)
+                                    Console.WriteLine($"  BULK: {prod.BulkPrice}грн");
+                                
+                                if (prod.IsOnSale)
+                                    Console.WriteLine($"  SALE: {prod.OldPrice}грн → {prod.Price}грн ({prod.Discount})");
+                            }
                         }
                     }
+                    catch (Exception ex)
 
                     if (!string.IsNullOrWhiteSpace(prod.Name) && prod.Price > 0)
                     {
-                        products.Add(prod);
-
-                        Console.WriteLine($"Added: {prod.Name} — {prod.Price}grn. URL to image is - {imgSrc}");
-
-                        if (prod.IsBulk)
-                            Console.WriteLine($"It`s a BULK: {prod.BulkPrice}grn");
-
-                        if (prod.IsOnSale)
-                            Console.WriteLine($"It`s a SALE: {prod.OldPrice}grn → {prod.Price}grn ({prod.Discount})");
+                        if (_config.EnableLogging)
+                            Console.WriteLine($"Error parsing product card: {ex.Message}");
                     }
                 }
-                catch { }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error scraping page {url}: {ex.Message}");
+                
+                if (_config.SaveErrorScreenshots)
+                {
+                    try
+                    {
+                        await page.ScreenshotAsync(new PageScreenshotOptions 
+                        { 
+                            Path = $"error_{DateTime.Now:yyyyMMddHHmmss}.png", 
+                            FullPage = true 
+                        });
+                    }
+                    catch { }
+                }
             }
 
             return products;
         }
+
         /// Opens up to 3 catalog pages simultaneously
         private async Task<List<Product>> ScrapeCatalogsInParallelAsync(List<string> urls, IBrowserContext context)
         {
