@@ -4,18 +4,29 @@
   gap: 20px;
   padding: 20px;
 }
+
+.category-name {
+  font-weight: 500;
+  font-size: 20px;
+}
+
 .search-bar-box {
   display: flex;
   justify-content: center;
   background-color: #ffffff3d;
   height: 70px;
 }
+
 .sidebar-sticky {
   position: sticky;
-  top: 12px;        /* відстань від верху вікна */
-  z-index: 1000;    /* поверх сусідніх блоків */
-  align-self: start;/* щоб не розтягувало по висоті грідом */
+  top: 12px;
+  /* відстань від верху вікна */
+  z-index: 1000;
+  /* поверх сусідніх блоків */
+  align-self: start;
+  /* щоб не розтягувало по висоті грідом */
 }
+
 .sidebar {
   background: #fff;
   border: 1px solid #3f3f3f70;
@@ -23,7 +34,7 @@
   padding: 15px;
 
   /* Щоб вміст скролився всередині, а «липкість» зберігалась */
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
 }
 
 .content {
@@ -36,22 +47,105 @@ div {
   padding: 5px;
 }
 
-.inputT{
-  border:none;
-  background-color: none;
-  width:7vh;
+.inputT {
+  border: none;
+  width: auto;
+  min-width: 1ch;
+  max-width: 6ch;
+  text-align: center;
 }
 
-.keyword-chips{
+
+.keyword-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   width: 30vh;
 }
 
-.chip{
-  border:none;
+.chip {
+  border: none;
   border-radius: 10px;
   background-color: #F9F9F6;
-  padding:0.5vh;
+  padding: 0.5vh;
+}
+
+.nice-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.nice-checkbox-text {
+  display: inline-block;
+  line-height: 22px;
+  /* така ж висота, як .nice-checkbox-box */
+  margin: 0;
+  /* на всякий випадок прибираємо відступи */
+}
+
+
+.nice-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nice-checkbox-text {
+  display: inline-block;
+  line-height: 2px;
+  margin: 0;
+}
+
+.nice-checkbox-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgb(0, 0, 0);
+  border-radius: 6px;
+  background: #ffffff;
+  display: inline-block;
+  position: relative;
+}
+
+.nice-checkbox-box::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 9px;
+  height: 14px;
+  border-right: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(40deg);
+  transition: 0.4s;
+
+}
+
+.nice-checkbox-input:checked+.nice-checkbox-box::after {
+  top: 0px;
+  right: 0px;
+  left: 4px;
+  border-color: rgb(255, 255, 255);
+}
+
+.nice-checkbox:hover .nice-checkbox-box {
+  background: #26C6DA;
+  transition: 0.4s;
+}
+
+.search-button {
+  position: relative;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  left: 35%;
+  border: none;
+  border-radius: 10px;
+  background-color: rgb(233, 181, 10);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+
+}
+
+.nice-checkbox-input:checked~.nice-checkbox-box {
+  background-color: black;
 }

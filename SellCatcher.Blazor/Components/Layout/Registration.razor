@@ -1,22 +1,29 @@
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Forms
 @using System.Text.Json
+@using System.Net.Http.Json
+@inject CustomAuthStateProvider AuthStateProvider
 
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-<div class="modal-overlay" @onclick="OnBackdropClick">
-    <div class="@Class" @onclick:stopPropagation>
-        <div class="actions">
-            <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
-            <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
+<div class="modal-overlay">
+    <div class="@ModalCssClass" @onclick:stopPropagation>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="actions">
+                <input type="radio" name="auth" id="SignIn" checked="@Enter" @onclick="SignTypeIn">
+                <label for="SignIn" class="button @(Enter ? "active" : "")">Sign In</label>
 
-            <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
-            <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
+                <input type="radio" name="auth" id="SignUp" checked="@(!Enter)" @onclick="SignTypeUp">
+                <label for="SignUp" class="button @(!Enter ? "active" : "")">Sign Up</label>
+            </div>
+            <button type="button" class="close-button" @onclick="OnCloseClick" aria-label="Close">
+                ✕
+            </button>
         </div>
 
         @if (Enter)
         {
+            @* ФОРМА ВХОДУ *@
             <EditForm Model="@loginModel" OnValidSubmit="@SubmitLogin">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
@@ -41,12 +48,13 @@
 
                 @if (!string.IsNullOrWhiteSpace(error))
                 {
-                    <p class="error-text">@error</p>
+                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
                 }
             </EditForm>
         }
         else
         {
+            @* ФОРМА РЕЄСТРАЦІЇ *@
             <EditForm Model="@registerModel" OnValidSubmit="@SubmitRegister">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
@@ -59,7 +67,7 @@
 
                 <div style="margin-top:10px;">
                     <label>Email</label><br />
-                    <InputText type="email" class="inputInfo" @bind-Value="registerModel.Email" />
+                    <InputText class="inputInfo" @bind-Value="registerModel.Email" placeholder="email@example.com" />
                     <ValidationMessage For="@(() => registerModel.Email)" />
                 </div>
 
@@ -89,7 +97,7 @@
 
                 @if (!string.IsNullOrWhiteSpace(error))
                 {
-                    <p class="error-text">@error</p>
+                    <p class="error-text" style="color:red; margin-top:10px;">@error</p>
                 }
             </EditForm>
         }
@@ -97,85 +105,106 @@
 </div>
 
 @code {
-    string Class = "modal";
-    bool Enter = true;
-    bool isBusy = false;
-    string? error;
-
+    [Parameter] public bool Enter { get; set; } = true;
+    [Parameter] public string Class { get; set; } = "";
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public EventCallback<AuthResult> OnSuccess { get; set; }
 
-    LoginRequest loginModel = new();
-    RegisterRequest registerModel = new();
+    private LoginViewModel loginModel = new();
+    private RegisterViewModel registerModel = new();
 
+    private bool isBusy = false;
+    private string? error;
+    private string ModalCssClass =>
+    string.IsNullOrWhiteSpace(Class)
+    ? (Enter ? "modal" : "modal modal-reg")
+    : (Enter ? $"modal {Class}" : $"modal modal-reg {Class}");
     private void SignTypeIn()
     {
-        error = null;
-        Class = "modal";
         Enter = true;
+        error = null;
     }
 
     private void SignTypeUp()
     {
-        error = null;
-        Class = "modal-reg";
         Enter = false;
+        error = null;
     }
 
+    private async Task OnCloseClick()
+    {
+        if (isBusy)
+            return;
+
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    // --------- LOGIN ---------
     private async Task SubmitLogin()
     {
-        error = null;
+        if (isBusy)
+            return;
+
         isBusy = true;
+        error = null;
 
         try
         {
-            var body = new LoginRequestDto
+            var payload = new
             {
                 UserName = loginModel.Phone,
                 Password = loginModel.Password
             };
 
-            using var resp = await Http.PostAsJsonAsync("/api/login", body);
-
-            if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                error = "Invalid phone or password.";
-                return;
-            }
+            var resp = await Http.PostAsJsonAsync("api/login", payload);
 
             if (!resp.IsSuccessStatusCode)
             {
-                error = await ReadErrorAsync(resp);
+                var errorText = await resp.Content.ReadAsStringAsync();
+                error = TryParseErrorMessage(errorText);
                 return;
             }
 
-            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
-            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
+            var result = await resp.Content.ReadFromJsonAsync<ApiTokenResponse>();
+
+            if (result == null || string.IsNullOrWhiteSpace(result.AccessToken))
             {
-                error = "Invalid server response.";
+                error = "Помилка обробки відповіді сервера.";
                 return;
             }
 
-            var ok = new AuthResult
+            // токени
+            // 🔐 довіряємо CustomAuthStateProvider зберігання токенів і оновлення auth state
+            await AuthStateProvider.SetTokensAsync(result.AccessToken, result.RefreshToken);
+
+
+            // базова інформація про користувача (для профілю)
+            var userInfo = new
             {
-                Token = okJson.Token,
-                User = new UserInfo
-                {
-                    Name = loginModel.Phone,
-                    Phone = loginModel.Phone,
-                    Role = "User"
-                }
+                Id = "",
+                Name = loginModel.Phone,
+                Email = "",
+                Phone = loginModel.Phone
             };
 
-            await PersistAuthAsync(ok);
-            await OnSuccess.InvokeAsync(ok);
-            await OnClose.InvokeAsync();
+            await JS.InvokeVoidAsync(
+            "localStorage.setItem",
+            "auth_user",
+            JsonSerializer.Serialize(userInfo)
+            );
 
-            loginModel = new();
+            // закриваємо модалку
+            if (OnClose.HasDelegate)
+            {
+                await OnClose.InvokeAsync();
+            }
         }
         catch (Exception ex)
         {
-            error = "Network error: " + ex.Message;
+            Console.WriteLine(ex);
+            error = "Помилка з'єднання з сервером.";
         }
         finally
         {
@@ -183,51 +212,53 @@
         }
     }
 
+    // --------- REGISTER ---------
     private async Task SubmitRegister()
     {
-        error = null;
+        if (isBusy)
+            return;
+
         isBusy = true;
+        error = null;
 
         try
         {
-            var dto = ToRegisterDto(registerModel);
+            var names = registerModel.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var firstName = names.Length > 0 ? names[0] : registerModel.Name;
+            var lastName = names.Length > 1 ? names[1] : "";
 
-            using var resp = await Http.PostAsJsonAsync("/api/register", dto);
+            // телефон = логін
+            var userNameToUse = registerModel.Phone;
+
+            var apiPayload = new
+            {
+                UserName = userNameToUse,
+                FirstName = firstName,
+                LastName = lastName,
+                Email = registerModel.Email,
+                Phone = registerModel.Phone,
+                Password = registerModel.Password
+            };
+
+            var resp = await Http.PostAsJsonAsync("api/register", apiPayload);
 
             if (!resp.IsSuccessStatusCode)
             {
-                error = await ReadErrorAsync(resp);
+                var errorText = await resp.Content.ReadAsStringAsync();
+                error = TryParseErrorMessage(errorText);
                 return;
             }
 
-            var okJson = await resp.Content.ReadFromJsonAsync<AuthResultFromApi>();
-            if (okJson is null || string.IsNullOrWhiteSpace(okJson.Token))
-            {
-                error = "Invalid server response.";
-                return;
-            }
+            // автологін після реєстрації
+            loginModel.Phone = registerModel.Phone;
+            loginModel.Password = registerModel.Password;
 
-            var ok = new AuthResult
-            {
-                Token = okJson.Token,
-                User = new UserInfo
-                {
-                    Name = registerModel.Name,
-                    Email = registerModel.Email,
-                    Phone = registerModel.Phone,
-                    Role = "User"
-                }
-            };
-
-            await PersistAuthAsync(ok);
-            await OnSuccess.InvokeAsync(ok);
-            await OnClose.InvokeAsync();
-
-            registerModel = new();
+            await SubmitLogin();
         }
         catch (Exception ex)
         {
-            error = "Network error: " + ex.Message;
+            Console.WriteLine(ex);
+            error = "Помилка з'єднання з сервером.";
         }
         finally
         {
@@ -235,99 +266,60 @@
         }
     }
 
-    private RegisterRequestDto ToRegisterDto(RegisterRequest r)
+    // --------- helpers ---------
+    private static string TryParseErrorMessage(string response)
     {
-        var parts = (r.Name ?? "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var first = parts.Length > 0 ? parts[0] : "";
-        var last = parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : "";
-
-        return new RegisterRequestDto
+        try
         {
-            UserName = r.Phone,
-            FirstName = first,
-            LastName = last,
-            Email = r.Email,
-            Password = r.Password
-        };
+            using var doc = JsonDocument.Parse(response);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("detail", out var detail))
+                return detail.GetString() ?? "Помилка авторизації";
+
+            if (root.TryGetProperty("message", out var msg))
+                return msg.GetString() ?? "Помилка авторизації";
+        }
+        catch
+        {
+            // ігноруємо, нижче повернемо загальне повідомлення
+        }
+
+        return response.Length > 100 ? "Помилка авторизації" : response;
     }
 
-    private async Task PersistAuthAsync(AuthResult ok)
-    {
-        await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", ok.Token);
-        await JS.InvokeVoidAsync("localStorage.setItem", "auth_user", JsonSerializer.Serialize(ok.User));
-    }
-
-    private async Task<string?> ReadErrorAsync(HttpResponseMessage resp)
-    {
-        var txt = await resp.Content.ReadAsStringAsync();
-        return string.IsNullOrWhiteSpace(txt) ? $"Error {(int)resp.StatusCode}" : txt;
-    }
-
-    private void Close() => OnClose.InvokeAsync();
-    private void OnBackdropClick() => OnClose.InvokeAsync();
-
-    public sealed class LoginRequest
+    // --------- ViewModels ---------
+    public class LoginViewModel
     {
         [Required]
-        [StringLength(20, MinimumLength = 7)]
         public string Phone { get; set; } = "";
 
         [Required]
-        [StringLength(100, MinimumLength = 6)]
         public string Password { get; set; } = "";
     }
 
-    public sealed class RegisterRequest
+    public class RegisterViewModel
     {
-        [Required, StringLength(80)]
+        [Required]
         public string Name { get; set; } = "";
 
         [Required, EmailAddress]
         public string Email { get; set; } = "";
 
-        [Required, StringLength(20, MinimumLength = 7)]
+        [Required]
         public string Phone { get; set; } = "";
 
         [Required, StringLength(100, MinimumLength = 6)]
         public string Password { get; set; } = "";
 
         [Required]
-        [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
+        [Compare(nameof(Password), ErrorMessage = "Паролі не співпадають")]
         public string ConfirmPassword { get; set; } = "";
     }
 
-    public sealed class LoginRequestDto
+    public class ApiTokenResponse
     {
-        public string UserName { get; set; } = "";
-        public string Password { get; set; } = "";
-    }
-
-    public sealed class RegisterRequestDto
-    {
-        public string UserName { get; set; } = "";
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
-    }
-
-    public sealed class UserInfo
-    {
-        public string Name { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Phone { get; set; } = "";
-        public string? Role { get; set; }
-    }
-
-    public sealed class AuthResult
-    {
-        public string Token { get; set; } = "";
-        public UserInfo User { get; set; } = new();
-    }
-
-    public sealed class AuthResultFromApi
-    {
-        public string? Message { get; set; }
-        public string Token { get; set; } = "";
+        public string AccessToken { get; set; } = "";
+        public string RefreshToken { get; set; } = "";
     }
 }

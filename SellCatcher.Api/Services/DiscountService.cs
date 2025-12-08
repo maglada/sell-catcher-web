@@ -22,8 +22,15 @@ namespace SellCatcher.Api.Services
             _dbPath = Path.Combine(DBPlace, "sellcatcher.db");
         }
 
+        public List<Product> GetAllProducts()
+        {
+            using var db = new LiteDatabase(_dbPath);
+            var stores = db.GetCollection<Store>("stores").FindAll();
 
-        public List<Product> GetAll()
+            return stores.SelectMany(s => s.Categories).SelectMany(c => c.Products).ToList();
+        }
+
+        public List<Product> GetAllSales()
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores").FindAll();
@@ -42,7 +49,7 @@ namespace SellCatcher.Api.Services
             return store.Categories.SelectMany(c => c.Products).Where(p => p.IsOnSale && (p.ValidUntil == null || p.ValidUntil > DateTime.Now)).ToList();
         }
 
-        public Product? GetById(Guid id)
+        public Product? GetByIdSale(Guid id)
         {
             using var db = new LiteDatabase(_dbPath);
             var stores = db.GetCollection<Store>("stores");
@@ -54,6 +61,24 @@ namespace SellCatcher.Api.Services
                     var product = category.Products.FirstOrDefault(p => p.Id == id);
 
                     if (product != null && (product.IsOnSale || !string.IsNullOrEmpty(product.Discount)))
+                        return product;
+                }
+            }
+            return null;
+        }
+
+        public Product? GetByIdProduct(Guid id)
+        {
+            using var db = new LiteDatabase(_dbPath);
+            var stores = db.GetCollection<Store>("stores");
+
+            foreach (var store in stores.FindAll())
+            {
+                foreach (var category in store.Categories)
+                {
+                    var product = category.Products.FirstOrDefault(p => p.Id == id);
+
+                    if (product != null)
                         return product;
                 }
             }

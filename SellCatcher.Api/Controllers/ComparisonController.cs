@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualBasic;
 using SellCatcher.Api.Models;
 using SellCatcher.Api.Services;
+using System.Text.RegularExpressions;
+using ProductScraper;
 
 namespace SellCatcher.Api.Controllers
 {
@@ -38,7 +40,7 @@ namespace SellCatcher.Api.Controllers
         public IActionResult CompareProduct(string productName)
         {
             var discounts = _discountService
-                .GetAll()
+                .GetAllSales()
                 .Where(d => d.Name.Contains(productName, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(d => d.Price);
 
@@ -50,106 +52,142 @@ namespace SellCatcher.Api.Controllers
 
         // BAD SOLUTION BELOW - TO REFACTOR LATER
         //TOTEST POSTMAN MANUALLY
-/*        //categ filter    
-        [HttpGet("filter/{category}")] 
-        public IActionResult FilterByCategory(string category)
-        {
-            var discounts = _discountService
-                .GetAll()
-                .Where(d => d.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+        /*        //categ filter    
+                [HttpGet("filter/{category}")] 
+                public IActionResult FilterByCategory(string category)
+                {
+                    var discounts = _discountService
+                        .GetAll()
+                        .Where(d => d.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
 
-            if (!discounts.Any())
-                return NotFound(new { Message = "Знижки в цій категорії не знайдено." });
+                    if (!discounts.Any())
+                        return NotFound(new { Message = "Знижки в цій категорії не знайдено." });
 
-            return Ok(discounts);
-        }
+                    return Ok(discounts);
+                }
 
-        //name filter
-        [HttpGet("filter/sotre/{storeName}")] 
-        public IActionResult FilterByStore(string storeName)
-        {
-            var discounts = _discountService
-                .GetAll()
-                .Where(d => d.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
-            var store = _storeService.GetByName(storeName);
-            if (store == null)
-                return NotFound(new { Message = "Магазин не знайдено." });
-            return Ok(store);
-        }
+                //name filter
+                [HttpGet("filter/sotre/{storeName}")] 
+                public IActionResult FilterByStore(string storeName)
+                {
+                    var discounts = _discountService
+                        .GetAll()
+                        .Where(d => d.Name.Equals(storeName, StringComparison.OrdinalIgnoreCase));
+                    var store = _storeService.GetByName(storeName);
+                    if (store == null)
+                        return NotFound(new { Message = "Магазин не знайдено." });
+                    return Ok(store);
+                }
 
-        //minmax filter
-        [HttpGet("filter/price/{minPrice}/{maxPrice}")]
-        public IActionResult FilterByPriceRange(decimal minPrice, decimal maxPrice)
-        {
-            var discounts = _discountService
-                .GetAll()
-                .Where(d => d.Price >= minPrice && d.Price <= maxPrice);
-            if (!discounts.Any()) return NotFound(new { Message = "Знижки в цьому ціновому діапазоні не знайдено." });
-            return Ok(discounts);    
-        }
+                //minmax filter
+                [HttpGet("filter/price/{minPrice}/{maxPrice}")]
+                public IActionResult FilterByPriceRange(decimal minPrice, decimal maxPrice)
+                {
+                    var discounts = _discountService
+                        .GetAll()
+                        .Where(d => d.Price >= minPrice && d.Price <= maxPrice);
+                    if (!discounts.Any()) return NotFound(new { Message = "Знижки в цьому ціновому діапазоні не знайдено." });
+                    return Ok(discounts);    
+                }
 
-        //keyword filter
-        [HttpGet("filter/search/{searchTerm}")]
-        public IActionResult SearchDiscounts(string searchTerm)
-        {   
-            var discounts = _discountService
-                .GetAll()
-                .Where(d => d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-            if (!discounts.Any())
-                return NotFound(new { Message = "Знижки за цим запитом не знайдено." });
-            return Ok(discounts);
-        }
-*/
+                //keyword filter
+                [HttpGet("filter/search/{searchTerm}")]
+                public IActionResult SearchDiscounts(string searchTerm)
+                {   
+                    var discounts = _discountService
+                        .GetAll()
+                        .Where(d => d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                    if (!discounts.Any())
+                        return NotFound(new { Message = "Знижки за цим запитом не знайдено." });
+                    return Ok(discounts);
+                }
+        */
 
         [HttpGet("filter")]
         public IActionResult Filtering()  //will look like filter?category=x. CAN BE COMBINED like filter?category=x&minPrice=y and so on
         {
-            var discounts = _discountService.GetAll().AsQueryable();
-            
+            var discounts = _discountService.GetAllProducts().AsEnumerable();
+
             // categ filter (?category=x)
             if (Request.Query.TryGetValue("category", out var category))
             {
-                discounts = discounts.Where(d => 
+                discounts = discounts.Where(d =>
                     d.Category.Equals(category.ToString(), StringComparison.OrdinalIgnoreCase));
             }
-            
+
             // name filter (?storeName=x)
             if (Request.Query.TryGetValue("storeName", out var storeName))
             {
-                discounts = discounts.Where(d => 
-                    d.Name.Equals(storeName.ToString(), StringComparison.OrdinalIgnoreCase));
+                discounts = discounts.Where(d =>
+                    d.StoreName.Equals(storeName.ToString(), StringComparison.OrdinalIgnoreCase));
             }
-            
+
             // min filter (?minPrice=x)
-            if (Request.Query.TryGetValue("minPrice", out var minPriceStr) 
+            if (Request.Query.TryGetValue("minPrice", out var minPriceStr)
                 && decimal.TryParse(minPriceStr, out var minPrice))
             {
                 discounts = discounts.Where(d => d.Price >= minPrice);
             }
-            
+
             // max filter (?maxPrice=x)
-            if (Request.Query.TryGetValue("maxPrice", out var maxPriceStr) 
+            if (Request.Query.TryGetValue("maxPrice", out var maxPriceStr)
                 && decimal.TryParse(maxPriceStr, out var maxPrice))
             {
                 discounts = discounts.Where(d => d.Price <= maxPrice);
             }
             // BOT ABOVE CAN BE SET TO DIFF SLIDERS(two sliders in frontend)
-            
+
             // search filter (?search=x)
             if (Request.Query.TryGetValue("search", out var searchTerm))
             {
-                discounts = discounts.Where(d => 
+                discounts = discounts.Where(d =>
                     d.Name.Contains(searchTerm.ToString(), StringComparison.OrdinalIgnoreCase));
             }
-            
+
+            // similar filter (?similar=x) 
+            if (Request.Query.TryGetValue("similar", out var similar))
+            {
+                string request = similar.ToString().Trim().ToLower();
+
+                var sequence = request.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                var matched = discounts.Where(item =>item.Name != null && sequence.All(q => item.Name.ToLower().Contains(q))).ToList();
+
+                if (!matched.Any())
+                    return NotFound(new { Message = "Таких товарів немає." });
+
+                var groups = matched.GroupBy(item => string.Join(" ", sequence)).Select(x => new
+                    {
+                        Keyword = x.Key,
+                        Stores = x.Select(s => s.StoreName).Distinct(),
+                        Matches = x.ToList()
+                    })
+                    .Where(w => w.Stores.Count() > 1).Select(s => new
+                    {
+                        s.Keyword,
+                        Items = s.Matches.Select(x => new
+                        {
+                            x.Name,
+                            x.StoreName,
+                            x.Price,
+                            x.OldPrice,
+                            x.Discount
+                        })
+                    }).ToList();
+
+                if (!groups.Any())
+                    return NotFound(new { Message = "Таких спільних товарів немає." });
+
+                return Ok(groups);
+            }
+
             // fin. this one is what user gets(thats why ?param1=x&param2=y is possible)
             var result = discounts.ToList();
-            
+
             if (!result.Any())
                 return NotFound(new { Message = "Знижки за заданими критеріями не знайдено." });
-            
+
             return Ok(result);
         }
-        
     }
 }
