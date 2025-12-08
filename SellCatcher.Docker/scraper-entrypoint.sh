@@ -3,39 +3,42 @@ set -e
 
 echo "[$(date)] Starting scraper service..."
 
-# Check if Playwright browsers are installed
-if [ ! -d "/ms-playwright/chromium-1140" ] || [ ! -d "/ms-playwright/firefox-1463" ]; then
-    echo "[$(date)] Installing Playwright browsers (this may take 5-10 minutes)..."
+CHROMIUM_REV="1187"
+FIREFOX_REV="1490"
+CHROMIUM_DIR="/ms-playwright/chromium_headless_shell-${CHROMIUM_REV}"
+FIREFOX_DIR="/ms-playwright/firefox-${FIREFOX_REV}"
+
+if [ ! -f "/ms-playwright/.playwright-installed" ]; then
+    echo "[$(date)] Installing Playwright browsers for version 1.55.0..."
     
     apt-get update
     apt-get install -y wget unzip
     
-    # Create directories
-    mkdir -p /ms-playwright/chromium-1140
-    mkdir -p /ms-playwright/firefox-1463
+    if [ ! -d "$CHROMIUM_DIR" ]; then
+        echo "[$(date)] Downloading Chromium Headless Shell ${CHROMIUM_REV}..."
+        mkdir -p "$CHROMIUM_DIR"
+        wget -q "https://playwright.azureedge.net/builds/chromium/${CHROMIUM_REV}/chromium-headless-shell-linux.zip" -O /tmp/chromium.zip
+        unzip -q /tmp/chromium.zip -d "$CHROMIUM_DIR/"
+        chmod +x "$CHROMIUM_DIR/chrome-linux/headless_shell"
+        rm /tmp/chromium.zip
+    fi
     
-    # Download and install Chromium
-    echo "[$(date)] Downloading Chromium..."
-    wget -q https://playwright.azureedge.net/builds/chromium/1140/chromium-linux.zip -O /tmp/chromium.zip
-    echo "[$(date)] Extracting Chromium..."
-    unzip -q /tmp/chromium.zip -d /ms-playwright/chromium-1140/
-    chmod +x /ms-playwright/chromium-1140/chrome-linux/chrome
-    rm /tmp/chromium.zip
+    if [ ! -d "$FIREFOX_DIR" ]; then
+        echo "[$(date)] Downloading Firefox ${FIREFOX_REV}..."
+        mkdir -p "$FIREFOX_DIR"
+        wget -q "https://playwright.azureedge.net/builds/firefox/${FIREFOX_REV}/firefox-ubuntu-22.04.zip" -O /tmp/firefox.zip
+        unzip -q /tmp/firefox.zip -d "$FIREFOX_DIR/"
+        chmod +x "$FIREFOX_DIR/firefox/firefox"
+        rm /tmp/firefox.zip
+    fi
     
-    # Download and install Firefox
-    echo "[$(date)] Downloading Firefox..."
-    wget -q https://playwright.azureedge.net/builds/firefox/1463/firefox-ubuntu-22.04.zip -O /tmp/firefox.zip
-    echo "[$(date)] Extracting Firefox..."
-    unzip -q /tmp/firefox.zip -d /ms-playwright/firefox-1463/
-    chmod +x /ms-playwright/firefox-1463/firefox/firefox
-    rm /tmp/firefox.zip
-    
+    touch /ms-playwright/.playwright-installed
     echo "[$(date)] Playwright browsers installed successfully"
 else
     echo "[$(date)] Playwright browsers already installed"
 fi
 
-# Wait for API to be ready
+# Wait for API
 echo "[$(date)] Waiting for API..."
 until curl -f http://api:5000/health 2>/dev/null; do
     echo "[$(date)] API not ready yet, waiting..."
@@ -43,7 +46,7 @@ until curl -f http://api:5000/health 2>/dev/null; do
 done
 echo "[$(date)] API is ready!"
 
-# Run immediately on startup
+# Run immediately
 echo "[$(date)] Running initial scraper job..."
 curl -X POST http://api:5000/api/scraper/run \
     --connect-timeout 30 \
@@ -51,7 +54,7 @@ curl -X POST http://api:5000/api/scraper/run \
     -H "Content-Type: application/json" \
     -v || echo "[$(date)] Initial scraper failed"
 
-# Main loop: run every 24 hours
+# Main loop
 while true; do
     echo "[$(date)] Sleeping for 24 hours..."
     sleep 86400

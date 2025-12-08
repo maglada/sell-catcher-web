@@ -1,44 +1,48 @@
 #!/bin/bash
 set -e
 
-echo "[$(date)] Starting API service..."
+echo "[$(date)] Starting service..."
 
-# Check what Playwright version is actually being used
-CHROMIUM_VERSION="1140"  # Updated to match Playwright.NET version
-FIREFOX_VERSION="1463"   # Updated to match Playwright.NET version
+# Playwright 1.55.0 uses these specific paths
+CHROMIUM_REV="1187"
+FIREFOX_REV="1490"
 
-if [ ! -d "/ms-playwright/chromium-${CHROMIUM_VERSION}" ] || [ ! -d "/ms-playwright/firefox-${FIREFOX_VERSION}" ]; then
-    echo "[$(date)] Installing Playwright browsers (this may take 5-10 minutes)..."
+CHROMIUM_DIR="/ms-playwright/chromium_headless_shell-${CHROMIUM_REV}"
+FIREFOX_DIR="/ms-playwright/firefox-${FIREFOX_REV}"
+
+if [ ! -f "/ms-playwright/.playwright-installed" ]; then
+    echo "[$(date)] Installing Playwright browsers for version 1.55.0..."
     
     apt-get update
     apt-get install -y wget unzip
     
-    # Create directories
-    mkdir -p /ms-playwright/chromium-${CHROMIUM_VERSION}
-    mkdir -p /ms-playwright/firefox-${FIREFOX_VERSION}
+    # Install Chromium Headless Shell (new in 1.55.0)
+    if [ ! -d "$CHROMIUM_DIR" ]; then
+        echo "[$(date)] Downloading Chromium Headless Shell ${CHROMIUM_REV}..."
+        mkdir -p "$CHROMIUM_DIR"
+        wget -q "https://playwright.azureedge.net/builds/chromium/${CHROMIUM_REV}/chromium-headless-shell-linux.zip" -O /tmp/chromium.zip
+        unzip -q /tmp/chromium.zip -d "$CHROMIUM_DIR/"
+        chmod +x "$CHROMIUM_DIR/chrome-linux/headless_shell"
+        rm /tmp/chromium.zip
+        echo "[$(date)] Chromium installed: $CHROMIUM_DIR/chrome-linux/headless_shell"
+    fi
     
-    # Download and install Chromium
-    echo "[$(date)] Downloading Chromium ${CHROMIUM_VERSION}..."
-    wget -q https://playwright.azureedge.net/builds/chromium/${CHROMIUM_VERSION}/chromium-linux.zip -O /tmp/chromium.zip
-    echo "[$(date)] Extracting Chromium..."
-    unzip -q /tmp/chromium.zip -d /ms-playwright/chromium-${CHROMIUM_VERSION}/
-    chmod +x /ms-playwright/chromium-${CHROMIUM_VERSION}/chrome-linux/chrome
-    rm /tmp/chromium.zip
+    # Install Firefox
+    if [ ! -d "$FIREFOX_DIR" ]; then
+        echo "[$(date)] Downloading Firefox ${FIREFOX_REV}..."
+        mkdir -p "$FIREFOX_DIR"
+        wget -q "https://playwright.azureedge.net/builds/firefox/${FIREFOX_REV}/firefox-ubuntu-22.04.zip" -O /tmp/firefox.zip
+        unzip -q /tmp/firefox.zip -d "$FIREFOX_DIR/"
+        chmod +x "$FIREFOX_DIR/firefox/firefox"
+        rm /tmp/firefox.zip
+        echo "[$(date)] Firefox installed: $FIREFOX_DIR/firefox/firefox"
+    fi
     
-    # Download and install Firefox
-    echo "[$(date)] Downloading Firefox ${FIREFOX_VERSION}..."
-    wget -q https://playwright.azureedge.net/builds/firefox/${FIREFOX_VERSION}/firefox-ubuntu-22.04.zip -O /tmp/firefox.zip
-    echo "[$(date)] Extracting Firefox..."
-    unzip -q /tmp/firefox.zip -d /ms-playwright/firefox-${FIREFOX_VERSION}/
-    chmod +x /ms-playwright/firefox-${FIREFOX_VERSION}/firefox/firefox
-    rm /tmp/firefox.zip
-    
+    touch /ms-playwright/.playwright-installed
     echo "[$(date)] Playwright browsers installed successfully"
-    echo "[$(date)] Chromium: /ms-playwright/chromium-${CHROMIUM_VERSION}/chrome-linux/chrome"
-    echo "[$(date)] Firefox: /ms-playwright/firefox-${FIREFOX_VERSION}/firefox/firefox"
 else
     echo "[$(date)] Playwright browsers already installed"
 fi
 
-echo "[$(date)] Starting ASP.NET Core API..."
+echo "[$(date)] Starting application..."
 exec dotnet SellCatcher.Api.dll
