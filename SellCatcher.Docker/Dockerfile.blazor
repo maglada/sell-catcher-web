@@ -1,26 +1,41 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["SellCatcher.Blazor/SellCatcher.Blazor.csproj", "SellCatcher.Blazor/"]
-RUN dotnet restore "SellCatcher.Blazor/SellCatcher.Blazor.csproj"
-COPY . .
-WORKDIR "/src/SellCatcher.Blazor"
-RUN dotnet build "SellCatcher.Blazor.csproj" -c Release -o /app/build
 
-# Publish stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS publish
-WORKDIR /src
 COPY ["SellCatcher.Blazor/SellCatcher.Blazor.csproj", "SellCatcher.Blazor/"]
 RUN dotnet restore "SellCatcher.Blazor/SellCatcher.Blazor.csproj"
+
 COPY . .
 WORKDIR "/src/SellCatcher.Blazor"
 RUN dotnet publish "SellCatcher.Blazor.csproj" -c Release -o /app/publish
 
-# Runtime stage - ASP.NET Core serves Blazor WASM
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
-WORKDIR /app
-COPY --from=publish /app/publish .
+# Runtime stage
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+
+RUN rm -rf /usr/share/nginx/html/*
+
+# FIXED: Copy from wwwroot subdirectory
+COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/
+
+# Create proper nginx config
+RUN echo 'server { \n\
+    listen 3000; \n\
+    server_name localhost; \n\
+    root /usr/share/nginx/html; \n\
+    index index.html; \n\
+    \n\
+    location / { \n\
+        try_files $uri $uri/ /index.html =404; \n\
+    } \n\
+    \n\
+    location ~* \.(js|css|wasm|json|png|jpg|jpeg|gif|ico|svg)$ { \n\
+        add_header Cache-Control "public, max-age=31536000, immutable"; \n\
+    } \n\
+    \n\
+    error_log /var/log/nginx/error.log debug; \n\
+    access_log /var/log/nginx/access.log; \n\
+}' > /etc/nginx/conf.d/default.conf
+
 EXPOSE 3000
-ENV ASPNETCORE_URLS=http://+:3000
-ENV ASPNETCORE_ENVIRONMENT=Production
-ENTRYPOINT ["dotnet", "SellCatcher.Blazor.dll"]
+CMD ["nginx", "-g", "daemon off;"]

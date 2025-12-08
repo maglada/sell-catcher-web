@@ -110,16 +110,18 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseRouting();
+
 app.UseForwardedHeaders();
 
 // CRITICAL: CORS must be BEFORE routing and auth
 app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
 
+
 // app.UseHttpsRedirection();
 app.UseCors("LocalDev");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRouting();
 
 // Map endpoints
 app.MapHealthChecks("/health");
