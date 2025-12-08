@@ -76,7 +76,8 @@ builder.Services.AddCors(options =>
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Add health checks
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 // Configure forwarded headers
 builder.Services.Configure<ForwardedHeadersOptions>(options =>

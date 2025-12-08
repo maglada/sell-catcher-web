@@ -75,9 +75,13 @@ RUN echo "=== Sites folder contents ===" && \
     ls -la /app/Services/Scraper/sites/ && \
     find /app/Services/Scraper/sites/ -name "*.txt" | wc -l
 
-# Use existing entrypoint script
-COPY SellCatcher.Docker/api-entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy the entrypoint script - use absolute path from build context
+COPY --chmod=755 SellCatcher.Docker/api-entrypoint.sh /app/entrypoint.sh
+
+# Verify it exists and has correct line endings
+RUN ls -la /app/entrypoint.sh && \
+    head -n 1 /app/entrypoint.sh && \
+    dos2unix /app/entrypoint.sh 2>/dev/null || sed -i 's/\r$//' /app/entrypoint.sh
 
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
