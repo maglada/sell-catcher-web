@@ -1,14 +1,10 @@
 .category-button {
-    background-color: aquamarine;
-    border-radius: 8px;
-    width: 150px;
+    background-color: #F9F9F6;
+    border-radius: 20%;
+    width: 20%;
     height: 150px;
     text-align: center;
     margin: 10px;
-    -webkit-border-radius: 8px;
-    -moz-border-radius: 8px;
-    -ms-border-radius: 8px;
-    -o-border-radius: 8px;
 }
 
 .category-button a {
@@ -17,11 +13,9 @@
     color: inherit;
 }
 
-.category-image{
+.category-image {
     width: 100%;
-    height: 150px;      /* можна підлаштувати */
-    object-fit: cover;  /* обрізає картинку акуратно */
-    border-radius: 8px; /* закруглені кути */
+    height: 150px;
     transition: transform 0.2s ease;
 }
 

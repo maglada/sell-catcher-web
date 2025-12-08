@@ -4,56 +4,69 @@
 <div class="page">
 
     <!-- Спільний Header -->
-    <header class="site-header">
-        <div class="logo-block">
+    <header class="site-header header-grid">
+        <!-- Ліва частина -->
+        <div class="header-left">
             @if (!IsHomePage)
             {
-                <div><a href="/">Лого</a></div>
+                <a href="/"><img src="icons/Logo.png" style="width:100px;" /></a>
             }
             @if (IsHomePage)
             {
-                <SimpleDropDownButton DropDownContent="Category|/categories, Home Page|/">
+                <SimpleDropDownButton DropDownContent="
+                                            Риба та морепродукти|/categories/риба,
+                                            Яйця та молочні|/categories/яйця,
+                                            Фрукти та овочі|/categories/фрукти,
+                                            М’ясо та птиця|/categories/м’ясо,
+                                            Напівфабрикати|/categories/напівфабрикати,
+                                            Цигарки|/categories/цигарки,
+                                            Випічка|/categories/випічка">
                     <img src="icons/layout-grid.svg" />
-                    Каталог
+                    <span style="font-weight: 600;">Каталог</span>
                 </SimpleDropDownButton>
             }
         </div>
-        <div style="">
-            <a href='/profile'>
-                <button class="iconbutton"><img src="icons/user.svg" /></button>
+
+        <!-- Центр (поки пустий, але можна буде щось додати) -->
+        <div class="header-center">
+            @* наприклад, сюди потім можна буде винести пошук на головній *@
+        </div>
+
+        <!-- Права частина: профіль + (кошик на головній) -->
+        <div class="header-right">
+            <a href="/profile">
+                <button class="iconbutton">
+                    <img style="width:35px;" src="icons/user.svg" />
+                </button>
             </a>
+
             @if (IsHomePage)
             {
-                <Bucket></Bucket>
+                <Bucket />
             }
         </div>
-        <!--<button onclick="window.location.href='/profile'">Profile</button>
-         закоментований варіант повністью перезавантажує 
-         сторінку через що з'являється загрузка, 
-         коли в той же час, варіант з <a> відразу переходе на посилання,
-         в результаті чого працює без загрузки-->
-        <!--<button class="button-yellow" @onclick="@bucketOn"><img src="icons/shopping-cart.svg"/>Кошик</button>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     }
--->
     </header>
+
     @if (!IsHomePage)
     {
-        <header class="site-header-second">
-            <div class="logo-block">
-                <SimpleDropDownButton DropDownContent="Category|/categories, Home Page|/">
+        <header class="site-header-second header-grid-second">
+            <div class="header-second-left">
+                <SimpleDropDownButton
+                    DropDownContent="Риба та морепродукти|/categories/риба,Яйця та молочні|/categories/яйця,Фрукти та овочі|/categories/фрукти,М’ясо та птиця|/categories/м’ясо,Напівфабрикати|/categories/напівфабрикати,Цигарки|/categories/цигарки,Випічка|/categories/випічка">
                     <img src="icons/layout-grid.svg" />
-                    Каталог
+                    <span style="font-weight: 600;">Каталог</span>
                 </SimpleDropDownButton>
-
             </div>
 
-            <div>
-                <SearchBar></SearchBar>
+            <div class="header-second-center">
+                <SearchBar />
             </div>
 
-            <div>
+            <div class="header-second-right">
                 <Bucket />
             </div>
         </header>
+
     }
     <!-- Тіло -->
     <main class="site-content">

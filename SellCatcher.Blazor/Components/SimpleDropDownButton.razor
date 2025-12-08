@@ -1,20 +1,22 @@
 <div style="display:inline-block; position:relative;">
-    <button @onclick="ToggleDropDown"
-            asd class="button-yellow">
+    <button @onclick="ToggleDropDown" class="button-yellow">
         @ChildContent
     </button>
 
     @if (isOpen && !string.IsNullOrEmpty(DropDownContent))
     {
         <ul class="dropdown-list">
-            @foreach (var item in DropDownContent.Split(','))
+            @foreach (var item in DropDownContent.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
                 var parts = item.Split('|');
                 if (parts.Length == 2)
                 {
-                    var name = parts[0].Trim();
-                    var url = parts[1].Trim();
-                    <li><a onclick="window.location.href='@url'" >@name</a></li>
+                    var name = parts[0].Trim(); // текст
+                    var url = parts[1].Trim(); // посилання /categories/...
+
+                    <li>
+                        <a href="@url"><img src="images/@($"{name}.png")" style="height:2vh; text-elign:center;" /> @name </a>
+                    </li>
                 }
             }
         </ul>
@@ -23,17 +25,9 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
-    [Parameter] public string? Style { get; set; }
-    [Parameter] public string? Width { get; set; }
-    [Parameter] public string? Height { get; set; }
-    [Parameter] public string? Class { get; set; }
-
     [Parameter] public string? DropDownContent { get; set; }
 
-    private bool isOpen = false;
+    private bool isOpen;
 
-    private void ToggleDropDown()
-    {
-        isOpen = !isOpen;
-    }
+    private void ToggleDropDown() => isOpen = !isOpen;
 }

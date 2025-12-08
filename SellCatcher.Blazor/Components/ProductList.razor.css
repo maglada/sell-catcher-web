@@ -1,5 +1,6 @@
 .products-container {
-  position: relative; /* щоб sticky працювало всередині */
+  position: relative;
+  /* щоб sticky працювало всередині */
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -7,8 +8,9 @@
   width: 100%;
   border-radius: 10px;
   background: #ffffff;
-  padding-bottom: 70px; /* щоб кнопки не перекривали товари */
-  scrollbar-gutter: stable both-edges; 
+  padding-bottom: 70px;
+  /* щоб кнопки не перекривали товари */
+  scrollbar-gutter: stable both-edges;
 
 }
 
@@ -28,6 +30,7 @@
   transition: 0.2s ease;
   width: 200px;
   height: 250px;
+
 }
 
 .product-button:hover {
@@ -46,7 +49,23 @@
   font-weight: 500;
   text-align: center;
   color: #333;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  transition: all 0.15s ease-in-out;
 }
+
+.product-button .name:hover {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  white-space: normal;
+  display: block;
+}
+
+
 
 .product-button .price {
   font-size: 18px;
@@ -56,7 +75,8 @@
 
 .pagination {
   position: sticky;
-  bottom: 0; /* прилипає до низу контейнера */
+  bottom: 0;
+  /* прилипає до низу контейнера */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -66,8 +86,9 @@
   border-radius: 10px;
   background: #fff;
   padding: 8px 16px;
-  margin-top: auto; /* штовхає вниз у flex-контейнері */
-  box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+  margin-top: auto;
+  /* штовхає вниз у flex-контейнері */
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 

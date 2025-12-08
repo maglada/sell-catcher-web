@@ -61,7 +61,7 @@ else
             loadError = null;
 
             // ОДИН запит на один продукт:
-            ProductCard = await Http.GetFromJsonAsync<Product>($"api/discounts/{ProductId}");
+            ProductCard = await Http.GetFromJsonAsync<Product>($"api/discounts/product/{ProductId}");
 
             if (ProductCard is null)
             {

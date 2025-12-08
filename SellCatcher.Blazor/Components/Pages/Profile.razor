@@ -1,6 +1,9 @@
 @page "/profile"
 
 @using System.Text.Json
+@using System.Net.Http
+@using System.Net.Http.Headers
+
 @inject IJSRuntime JS
 @inject HttpClient Http
 
@@ -85,7 +88,6 @@
 
                 <div>
                     <p class="prof-text">Пароль: </p>
-                    @* Пароль із сервера ми не тягнемо й не зберігаємо — просто маска *@
                     <span>********</span>
                 </div><br />
 
@@ -101,18 +103,41 @@
                     }
                 </div>
             </div>
+
+        </div>
+        <div class="logout-row">
+            <button class="bottonEnter" @onclick="LogoutAsync">Вийти з аккаунту</button>
         </div>
     }
+
 </div>
 
 @code {
     private bool isEditing = false;
     private string iconSrc = "icons/pencil.svg";
+    [CascadingParameter] public Action? ShowAuthModal { get; set; }
 
-    // Те, що показуємо на сторінці
+    private async Task LogoutAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user");
+
+        User = null;
+        isEditing = false;
+        iconSrc = "icons/pencil.svg";
+
+        StateHasChanged();
+    }
+
+    private async Task LoginAnotherAsync()
+    {
+        await LogoutAsync();
+        ShowAuthModal?.Invoke();
+    }
+
     private UserProfile? User;
 
-    // username, з яким ходимо в /api/accounts/{username}
     private string? currentUserName;
 
     protected override async Task OnInitializedAsync()
@@ -124,8 +149,8 @@
     {
         try
         {
-            // 1) Читаємо того юзера, якого зберігали в модалці (AuthResult.User)
             var json = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user");
+            Console.WriteLine($"auth_user raw json: {json}");
 
             if (string.IsNullOrWhiteSpace(json))
             {
@@ -133,21 +158,35 @@
                 return;
             }
 
-            var stored = JsonSerializer.Deserialize<StoredUserInfo>(json);
-            if (stored is null)
+            string? storedName = null;
+            string? storedEmail = null;
+            string? storedPhone = null;
+
+            try
             {
-                User = null;
-                return;
+                var stored = JsonSerializer.Deserialize<StoredUserInfo>(json);
+                if (stored != null)
+                {
+                    storedName = stored.Name;
+                    storedEmail = stored.Email;
+                    storedPhone = stored.Phone;
+                }
+            }
+            catch
+            {
+                storedName = json.Trim('"');
             }
 
-            currentUserName = stored.Phone ?? stored.Email ?? stored.Name;
+            currentUserName = storedPhone ?? storedEmail ?? storedName;
 
-            // 2) Базовий профіль із того, що знаємо з localStorage
+            if (string.IsNullOrWhiteSpace(storedName))
+                storedName = "Без імені";
+
             var profile = new UserProfile
             {
-                FullName = string.IsNullOrWhiteSpace(stored.Name) ? "Без імені" : stored.Name,
-                Email = stored.Email ?? "",
-                Phone = stored.Phone ?? "",
+                FullName = storedName,
+                Email = storedEmail ?? "",
+                Phone = storedPhone ?? "",
                 BirthDate = DateTime.Now,
                 Gender = "Невідомо"
             };
@@ -156,29 +195,50 @@
             {
                 try
                 {
-                    // /api/accounts/{username}
-                    var account = await Http.GetFromJsonAsync<AccountDto>($"api/accounts/{Uri.EscapeDataString(currentUserName)}");
-                    if (account is not null)
-                    {
-                        var fullName = BuildFullName(account.FirstName, account.LastName);
-                        if (!string.IsNullOrWhiteSpace(fullName))
-                            profile.FullName = fullName;
+                    var token = await JS.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                    Console.WriteLine($"authToken: {token}");
 
-                        // Якщо Email з аккаунта є – використовуємо його
-                        if (!string.IsNullOrWhiteSpace(account.Email))
-                            profile.Email = account.Email;
+                    if (!string.IsNullOrWhiteSpace(token))
+                    {
+                        var request = new HttpRequestMessage(
+                        HttpMethod.Get,
+                        $"api/accounts/{Uri.EscapeDataString(currentUserName)}"
+                        );
+
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                        var response = await Http.SendAsync(request);
+                        Console.WriteLine($"GET api/accounts/{currentUserName} -> {response.StatusCode}");
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var account = await response.Content.ReadFromJsonAsync<AccountDto>();
+                            if (account is not null)
+                            {
+                                var fullName = BuildFullName(account.FirstName, account.LastName);
+                                if (!string.IsNullOrWhiteSpace(fullName))
+                                    profile.FullName = fullName;
+
+                                if (!string.IsNullOrWhiteSpace(account.Email))
+                                    profile.Email = account.Email;
+
+                                if (!string.IsNullOrWhiteSpace(account.UserName))
+                                    profile.Phone = account.UserName;
+                            }
+                        }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Якщо немає такого акаунта або ще не створений — просто залишаємо те, що було у localStorage
+                    Console.WriteLine($"Error calling accounts API: {ex}");
                 }
             }
 
             User = profile;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Profile init error: {ex}");
             User = null;
         }
     }
@@ -198,10 +258,8 @@
 
         isEditing = !isEditing;
         iconSrc = isEditing ? "icons/pencil-off.svg" : "icons/pencil.svg";
-
     }
 
-    // Локальна модель для UI
     public class UserProfile
     {
         public string FullName { get; set; } = "Без імені";
