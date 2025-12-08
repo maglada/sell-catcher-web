@@ -212,11 +212,9 @@ namespace ProductScraper
                         }
                     }
                     catch (Exception ex)
-
-                    if (!string.IsNullOrWhiteSpace(prod.Name) && prod.Price > 0)
                     {
                         if (_config.EnableLogging)
-                            Console.WriteLine($"Error parsing product card: {ex.Message}");
+                            Console.WriteLine($"Error parsing product element: {ex.Message}");
                     }
                 }
             }
