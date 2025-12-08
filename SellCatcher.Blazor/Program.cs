@@ -8,7 +8,15 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(" https://monte-warier-minisculely.ngrok-free.dev") });
+var apiUrl = builder.Configuration["ApiUrl"] ?? "http://localhost:5000";
+
+builder.Services.AddScoped(sp => 
+{
+    var client = new HttpClient { BaseAddress = new Uri(apiUrl) };
+    // Add ngrok bypass header
+    client.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
+    return client;
+});
 
 await builder.Build().RunAsync();
 
