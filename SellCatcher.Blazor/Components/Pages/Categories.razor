@@ -1,4 +1,4 @@
-@page "/categories"
+@page "/ategories"
 @page "/categories/{Category}"
 @using System
 @using System.Net
@@ -312,8 +312,8 @@ new[]
         var query = string.Join("&", parts);
 
         return string.IsNullOrEmpty(query)
-        ? "/categories"
-        : $"/categories?{query}";
+        ? "categories"
+        : $"categories?{query}";
     }
 
     private void ApplyFiltersFromUrl(HashSet<string> selectedSlugs, List<string> keywords)
