@@ -54,22 +54,25 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
-    
-    // Specific policy for production with credentials
+
+    // For prod (Docker / real hosting, including ngrok front)
     options.AddPolicy("Production", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",
-                "http://localhost:5182",
-                "http://frontend:3000"
-              )
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        policy
+            .WithOrigins(
+                "http://localhost:3000",          // local front
+                "http://localhost:5182",          // maybe VS dev server
+                "http://frontend:3000",           // docker service
+                "https://your-frontend-ngrok.ngrok-free.dev" // ⬅ add your real ngrok frontend URL here
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
@@ -114,16 +117,13 @@ app.UseRouting();
 
 app.UseForwardedHeaders();
 
-// CRITICAL: CORS must be BEFORE routing and auth
+// Only ONE CORS call
 app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
 
-
 // app.UseHttpsRedirection();
-app.UseCors("LocalDev");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map endpoints
 app.MapHealthChecks("/health");
 app.MapControllers();
 

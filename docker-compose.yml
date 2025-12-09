@@ -36,7 +36,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       # CRITICAL: Use Docker network name for API
-      - API_URL=https://monte-warier-minisculely.ngrok-free.dev
+      - ApiUrl=https://monte-warier-minisculely.ngrok-free.dev
     networks:
       - sellcatcher-net
     restart: unless-stopped
