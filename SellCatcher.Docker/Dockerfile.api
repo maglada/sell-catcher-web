@@ -1,34 +1,98 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy project files
+COPY ["SellCatcher.Api/SellCatcher.Api.csproj", "SellCatcher.Api/"]
+RUN dotnet restore "SellCatcher.Api/SellCatcher.Api.csproj"
+
+# Copy source code
+COPY . .
+WORKDIR "/src/SellCatcher.Api"
+RUN dotnet build "SellCatcher.Api.csproj" -c Release -o /app/build
+
+# Publish stage
+FROM build AS publish
+RUN dotnet publish "SellCatcher.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Install PowerShell + Playwright dependencies
+# Install system dependencies for Playwright
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget curl powershell \
+    wget \
+    curl \
+    ca-certificates \
+    apt-transport-https \
+    gnupg \
     # Chromium dependencies
-    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
-    libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
-    libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0 \
-    libxshmfence1 libx11-6 libx11-xcb1 libxcb1 libxext6 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
+    libxshmfence1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxext6 \
     fonts-liberation \
     # Firefox dependencies
-    libdbus-glib-1-2 libxt6 \
+    libdbus-glib-1-2 \
+    libxt6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy browsers from installation stage (as fallback)
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-COPY --from=playwright-install /ms-playwright /ms-playwright
+# Install PowerShell from Microsoft repository
+RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    rm packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get install -y powershell && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copy published app
+# Create Playwright cache directory
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p /ms-playwright
+
+# Copy published app FIRST
 COPY --from=publish /app/publish .
 
-# Copy sites folder
+# Copy sites folder explicitly
 COPY SellCatcher.Api/Services/Scraper/sites /app/Services/Scraper/sites
 
-# Copy entrypoint
+# Verify sites folder
+RUN echo "=== Verifying sites folder ===" && \
+    ls -la /app/Services/Scraper/sites/ && \
+    echo "=== Counting txt files ===" && \
+    find /app/Services/Scraper/sites/ -name "*.txt" | wc -l
+
+# Install Playwright browsers using the app's Playwright version
+RUN PLAYWRIGHT_SCRIPT=$(find /app -name "playwright.ps1" 2>/dev/null | head -n 1) && \
+    if [ -n "$PLAYWRIGHT_SCRIPT" ]; then \
+        echo "Found Playwright at: $PLAYWRIGHT_SCRIPT" && \
+        pwsh "$PLAYWRIGHT_SCRIPT" install chromium firefox --with-deps && \
+        touch /ms-playwright/.playwright-installed && \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "ERROR: playwright.ps1 not found!" && exit 1; \
+    fi
+
+# Copy and prepare entrypoint script
 COPY SellCatcher.Docker/api-entrypoint.sh /app/entrypoint.sh
-RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
 
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
