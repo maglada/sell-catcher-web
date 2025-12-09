@@ -19,7 +19,7 @@ RUN dotnet publish "SellCatcher.Api.csproj" -c Release -o /app/publish /p:UseApp
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Install system dependencies (including wget for health checks and curl for scraper)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
@@ -56,12 +56,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN mkdir -p /ms-playwright
 
-# Copy published app
+# Copy published app FIRST
 COPY --from=publish /app/publish .
-
-# Install Playwright CLI tool
-RUN dotnet tool install --global Microsoft.Playwright.CLI || true
-ENV PATH="${PATH}:/root/.dotnet/tools"
 
 # Copy sites folder explicitly
 COPY SellCatcher.Api/Services/Scraper/sites /app/Services/Scraper/sites
@@ -72,20 +68,27 @@ RUN echo "=== Verifying sites folder ===" && \
     echo "=== Counting txt files ===" && \
     find /app/Services/Scraper/sites/ -name "*.txt" | wc -l
 
+# CRITICAL FIX: Install Playwright browsers using the app's Playwright version
+RUN PLAYWRIGHT_SCRIPT=$(find /app -name "playwright.ps1" 2>/dev/null | head -n 1) && \
+    if [ -n "$PLAYWRIGHT_SCRIPT" ]; then \
+        echo "Found Playwright at: $PLAYWRIGHT_SCRIPT" && \
+        apt-get update && apt-get install -y powershell && \
+        pwsh "$PLAYWRIGHT_SCRIPT" install chromium firefox --with-deps && \
+        touch /ms-playwright/.playwright-installed && \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "ERROR: playwright.ps1 not found!" && exit 1; \
+    fi
+
 # Copy and prepare entrypoint script
 COPY SellCatcher.Docker/scraper-entrypoint.sh /app/entrypoint.sh
-
-# Fix line endings and make executable
 RUN sed -i 's/\r$//' /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh && \
-    echo "=== Entrypoint script ===" && \
-    head -5 /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh
 
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Simpler healthcheck (scraper doesn't actually serve HTTP, but shares API image)
 HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
   CMD pgrep -f entrypoint.sh > /dev/null || exit 1
 
