@@ -6,6 +6,33 @@
   margin-top: 5vh;
 }
 
+.not-logged-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1.5rem;
+}
+
+.login-button {
+  background-color: rgb(233, 181, 10);
+  border: none;
+  border-radius: 15px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.login-button:hover {
+  background-color: rgb(220, 170, 5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 .avatar {
   width: 120px;
   height: 120px;
@@ -22,7 +49,7 @@
 .info-container {
   display: flex;
   justify-content: center;
-  gap: 10%;
+  gap: 5%;
   margin-bottom: 5vh;
   margin: 5vh;
   transition: 1s;
@@ -32,9 +59,9 @@
   flex: 1;
   min-width: 250px;
   max-width: 480px;
-  background-color: #26C6DA;
+  background-color: #c7f0f5;
   border: hidden;
-  border-radius: 50px;
+  border-radius: 30px;
   padding: 20px;
   text-align: left;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
@@ -80,5 +107,11 @@ select {
   background-color: #ff465f;
   margin-bottom: 10px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  cursor: pointer;
+  height: 50px;
+}
 
+.bottonEnter:hover {
+  background-color: #e63950;
 }

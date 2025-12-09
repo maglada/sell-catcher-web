@@ -1,3 +1,7 @@
+@using System.Net.Http.Json
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
 <div class="search-container">
     <input 
         type="text" 
@@ -5,11 +9,14 @@
         @bind="searchText" 
         @bind:event="oninput"
         @bind:after="OnTextChanged"
+        @onkeydown="HandleKeyDown"
         class="search-bar"
     />
-    <img src="icons/search.svg" class="search-icon" alt="search icon" />
+    <button @onclick="PerformSearch" class="search-button-icon" type="button">
+        <img src="icons/search.svg" class="search-icon" alt="search icon" />
+    </button>
 
-    @if (suggestions?.Any() == true)
+    @if (suggestions?.Any() == true && !string.IsNullOrWhiteSpace(searchText))
     {
         <ul class="suggestions-list">
             @foreach (var s in suggestions)
@@ -20,41 +27,88 @@
     }
 </div>
 
-
 @code {
     private string searchText = "";
-    private List<string> allItems = new() { "Пиво", "Вино", "Водка", "Віскі", "Сік", "Кава", "Чай" };
     private List<string> suggestions = new();
-    [Parameter] 
-    public string iconSearch{ get; set; } = "icons/search.svg";
+    private bool isLoadingSuggestions = false;
 
-    private void OnInputChanged(ChangeEventArgs e)
+    [Parameter] 
+    public string iconSearch { get; set; } = "icons/search.svg";
+
+    private async Task OnTextChanged()
     {
-        searchText = e.Value?.ToString() ?? "";
-        suggestions = allItems
-            .Where(x => x.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-            .Take(5)
-            .ToList();
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
+        {
+            suggestions.Clear();
+            return;
+        }
+
+        isLoadingSuggestions = true;
+
+        try
+        {
+            // Call your backend API search endpoint
+            var response = await Http.GetFromJsonAsync<List<ProductSearchResult>>(
+                $"api/discounts/search?query={Uri.EscapeDataString(searchText)}"
+            );
+
+            if (response != null)
+            {
+                suggestions = response
+                    .Select(p => p.Name)
+                    .Distinct()
+                    .Take(5)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search error: {ex.Message}");
+            suggestions.Clear();
+        }
+        finally
+        {
+            isLoadingSuggestions = false;
+        }
     }
 
     private void SelectSuggestion(string s)
     {
         searchText = s;
         suggestions.Clear();
+        PerformSearch();
     }
-        private void OnTextChanged()
+
+    private void HandleKeyDown(KeyboardEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(searchText))
+        if (e.Key == "Enter")
+        {
+            PerformSearch();
+        }
+        else if (e.Key == "Escape")
         {
             suggestions.Clear();
         }
-        else
-        {
-            suggestions = allItems
-            .Where(x => x.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-            .Take(5)
-            .ToList();
-        }
     }
 
+    private void PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+            return;
+
+        suggestions.Clear();
+
+        // Navigate to categories page with keyword search
+        var encodedSearch = Uri.EscapeDataString(searchText.Trim());
+        Navigation.NavigateTo($"/categories?keywords={encodedSearch}", forceLoad: true);
+    }
+
+    // DTO matching your backend Product model
+    public class ProductSearchResult
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Category { get; set; } = "";
+    }
 }

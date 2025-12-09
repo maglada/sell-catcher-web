@@ -5,12 +5,29 @@
   width: 400px;
 }
 
-.search-icon {
+.search-button-icon {
   position: absolute;
-  right: 10px; /* 🔹 розміщення справа */
-  top: 27px;
-  width: 15px;
-  height: 15px;
+  right: 5px;
+  top: 22px;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.search-button-icon:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
   opacity: 0.6;
   pointer-events: none;
 }
@@ -22,7 +39,8 @@
   outline: none;
   border-style: hidden;
   border-radius: 12px;
-  padding-right: 35px; /* 🔹 тепер відступ праворуч */
+  padding-left: 12px;
+  padding-right: 40px;
   background-color: #f8f8f8;
   font-size: 15px;
 }
@@ -38,7 +56,7 @@
   margin: 0;
   padding: 0;
   position: absolute;
-  top: 100%;
+  top: calc(100% + 1rem);
   width: 100%;
   background: white;
   border: 1px solid #ccc;
@@ -46,11 +64,14 @@
   overflow-y: auto;
   z-index: 1000;
   border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  color:black;
 }
 
 .suggestions-list li {
-  padding: 8px;
+  padding: 10px 12px;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 .suggestions-list li:hover {

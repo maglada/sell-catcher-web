@@ -6,12 +6,18 @@
 
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject CustomAuthStateProvider AuthStateProvider
 
 <div class="profile">
     @if (User is null)
     {
-        <h2>Ви не авторизовані</h2>
-        <p>Будь ласка, увійдіть у свій акаунт, щоб переглянути профіль.</p>
+        <div class="not-logged-in">
+            <h2>Ви не авторизовані</h2>
+            <p>Будь ласка, увійдіть у свій акаунт, щоб переглянути профіль.</p>
+            <button class="login-button" @onclick="ShowLoginModal">
+                Увійти / Зареєструватися
+            </button>
+        </div>
     }
     else
     {
@@ -112,16 +118,47 @@
 
 </div>
 
+@if (showAuthModal)
+{
+    <Registration OnClose="HideAuthModal" />
+}
+
 @code {
     private bool isEditing = false;
     private string iconSrc = "icons/pencil.svg";
-    [CascadingParameter] public Action? ShowAuthModal { get; set; }
+    private bool showAuthModal = false;
 
     private async Task LogoutAsync()
     {
+        // Call backend logout endpoint
+        try
+        {
+            var accessToken = await JS.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            var refreshToken = await JS.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+
+            if (!string.IsNullOrWhiteSpace(accessToken) || !string.IsNullOrWhiteSpace(refreshToken))
+            {
+                var logoutRequest = new
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                };
+
+                await Http.PostAsJsonAsync("api/logout", logoutRequest);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout API error: {ex.Message}");
+        }
+
+        // Clear local storage
         await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user");
+
+        // Update auth state
+        await AuthStateProvider.LogoutAsync();
 
         User = null;
         isEditing = false;
@@ -130,14 +167,20 @@
         StateHasChanged();
     }
 
-    private async Task LoginAnotherAsync()
+    private void ShowLoginModal()
     {
-        await LogoutAsync();
-        ShowAuthModal?.Invoke();
+        showAuthModal = true;
+    }
+
+    private async Task HideAuthModal()
+    {
+        showAuthModal = false;
+        // Reload user data after login
+        await LoadUserFromLocalStorageAndApiAsync();
+        StateHasChanged();
     }
 
     private UserProfile? User;
-
     private string? currentUserName;
 
     protected override async Task OnInitializedAsync()
@@ -201,8 +244,8 @@
                     if (!string.IsNullOrWhiteSpace(token))
                     {
                         var request = new HttpRequestMessage(
-                        HttpMethod.Get,
-                        $"api/accounts/{Uri.EscapeDataString(currentUserName)}"
+                            HttpMethod.Get,
+                            $"api/accounts/{Uri.EscapeDataString(currentUserName)}"
                         );
 
                         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -269,7 +312,6 @@
         public string Phone { get; set; } = "";
     }
 
-    // Те, що лежить у localStorage як auth_user (із модалки логіна/реєстрації)
     private sealed class StoredUserInfo
     {
         public string Id { get; set; } = "";
